@@ -1,0 +1,50 @@
+import {
+  BookOpen,
+  Boxes,
+  Braces,
+  Code2,
+  Compass,
+  Database,
+  FileText,
+  Folder,
+  Globe,
+  Hammer,
+  Layers,
+  Lightbulb,
+  Link2,
+  Palette,
+  Puzzle,
+  Rocket,
+  Sparkles,
+  Star,
+  Terminal,
+  Wrench,
+  type LucideIcon,
+} from "lucide-react";
+
+export const ICON_OPTIONS: { name: string; Icon: LucideIcon }[] = [
+  { name: "Folder", Icon: Folder },
+  { name: "Link2", Icon: Link2 },
+  { name: "BookOpen", Icon: BookOpen },
+  { name: "Code2", Icon: Code2 },
+  { name: "Terminal", Icon: Terminal },
+  { name: "Braces", Icon: Braces },
+  { name: "Database", Icon: Database },
+  { name: "Globe", Icon: Globe },
+  { name: "Palette", Icon: Palette },
+  { name: "Layers", Icon: Layers },
+  { name: "Boxes", Icon: Boxes },
+  { name: "Puzzle", Icon: Puzzle },
+  { name: "Compass", Icon: Compass },
+  { name: "Lightbulb", Icon: Lightbulb },
+  { name: "Rocket", Icon: Rocket },
+  { name: "Star", Icon: Star },
+  { name: "Sparkles", Icon: Sparkles },
+  { name: "Hammer", Icon: Hammer },
+  { name: "Wrench", Icon: Wrench },
+  { name: "FileText", Icon: FileText },
+];
+
+export function getIconComponent(name: string): LucideIcon {
+  return ICON_OPTIONS.find((option) => option.name === name)?.Icon ?? Folder;
+}
