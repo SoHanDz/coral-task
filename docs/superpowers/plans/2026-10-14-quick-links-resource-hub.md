@@ -923,7 +923,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { cleanDomainLabel } from "@/lib/resources/favicon";
+import { buildFaviconUrl, cleanDomainLabel, extractDomain } from "@/lib/resources/favicon";
 import type { LinkFolder, QuickLink } from "@/lib/resources/types";
 
 interface LinkFormDialogProps {
@@ -962,6 +962,7 @@ export function LinkFormDialog({
   const [title, setTitle] = useState(link?.title ?? "");
   const [description, setDescription] = useState(link?.description ?? "");
   const [folderId, setFolderId] = useState<string>(link?.folderId ?? NO_FOLDER_VALUE);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(link?.imageUrl ?? null);
 
   function handleOpenChange(next: boolean) {
     if (next) {
@@ -969,19 +970,27 @@ export function LinkFormDialog({
       setTitle(link?.title ?? "");
       setDescription(link?.description ?? "");
       setFolderId(link?.folderId ?? NO_FOLDER_VALUE);
+      setFaviconPreview(link?.imageUrl ?? null);
     }
     setOpenState(next);
   }
 
   // If the user hasn't typed a title yet, suggest one from the domain once
-  // they've finished typing the URL.
+  // they've finished typing the URL. Also refresh the favicon preview so
+  // they can see the thumbnail that will be saved before submitting.
   function handleUrlBlur() {
-    if (title.trim() || !url.trim()) return;
+    if (!url.trim()) {
+      setFaviconPreview(null);
+      return;
+    }
     try {
-      setTitle(cleanDomainLabel(url));
+      const domain = extractDomain(url);
+      setFaviconPreview(buildFaviconUrl(domain));
+      if (!title.trim()) setTitle(cleanDomainLabel(url));
     } catch {
-      // Not a parseable URL yet; leave title blank, required-field
+      // Not a parseable URL yet; leave title/preview as-is, required-field
       // validation on submit will catch it.
+      setFaviconPreview(null);
     }
   }
 
@@ -1007,14 +1016,20 @@ export function LinkFormDialog({
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="link-url">URL</Label>
-            <Input
-              id="link-url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              onBlur={handleUrlBlur}
-              placeholder="https://example.com"
-              required
-            />
+            <div className="flex items-center gap-2">
+              {faviconPreview && (
+                <img src={faviconPreview} alt="" className="size-6 shrink-0 rounded" />
+              )}
+              <Input
+                id="link-url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onBlur={handleUrlBlur}
+                placeholder="https://example.com"
+                required
+                className="flex-1"
+              />
+            </div>
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="link-title">Tiêu đề</Label>
