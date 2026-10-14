@@ -59,6 +59,7 @@ export function LinkFormDialog({
   const [description, setDescription] = useState(link?.description ?? "");
   const [folderId, setFolderId] = useState<string>(link?.folderId ?? NO_FOLDER_VALUE);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(link?.imageUrl ?? null);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   function handleOpenChange(next: boolean) {
     if (next) {
@@ -67,6 +68,7 @@ export function LinkFormDialog({
       setDescription(link?.description ?? "");
       setFolderId(link?.folderId ?? NO_FOLDER_VALUE);
       setFaviconPreview(link?.imageUrl ?? null);
+      setUrlError(null);
     }
     setOpenState(next);
   }
@@ -93,6 +95,13 @@ export function LinkFormDialog({
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
     if (!url.trim() || !title.trim()) return;
+    try {
+      extractDomain(url);
+    } catch {
+      setUrlError("URL không hợp lệ. Vui lòng kiểm tra lại.");
+      return;
+    }
+    setUrlError(null);
     onSubmit({
       url: url.trim(),
       title: title.trim(),
@@ -126,6 +135,7 @@ export function LinkFormDialog({
                 className="flex-1"
               />
             </div>
+            {urlError && <p className="text-xs text-destructive">{urlError}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="link-title">Tiêu đề</Label>
