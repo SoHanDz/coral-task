@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/supabase/require-user";
-import { extractDomain, buildFaviconUrl } from "@/lib/resources/favicon";
+import { extractDomain, buildFaviconUrl, normalizeUrl } from "@/lib/resources/favicon";
 import type { LinkFolder, QuickLink } from "@/lib/resources/types";
 
 interface FolderRow {
@@ -138,7 +138,8 @@ export async function createLink(input: {
   imageUrl?: string;
 }): Promise<QuickLink> {
   const { supabase, userId } = await requireUser();
-  const domain = extractDomain(input.url);
+  const normalizedUrl = normalizeUrl(input.url);
+  const domain = extractDomain(normalizedUrl);
   const imageUrl = input.imageUrl ?? buildFaviconUrl(domain);
 
   const { data, error } = await supabase
@@ -147,7 +148,7 @@ export async function createLink(input: {
       user_id: userId,
       folder_id: input.folderId ?? null,
       title: input.title,
-      url: input.url,
+      url: normalizedUrl,
       description: input.description ?? null,
       image_url: imageUrl,
     })
@@ -164,12 +165,13 @@ export async function updateLink(
   input: { url: string; title: string; description?: string; folderId?: string | null }
 ): Promise<QuickLink> {
   const { supabase, userId } = await requireUser();
-  const domain = extractDomain(input.url);
+  const normalizedUrl = normalizeUrl(input.url);
+  const domain = extractDomain(normalizedUrl);
 
   const { data, error } = await supabase
     .from("quick_links")
     .update({
-      url: input.url,
+      url: normalizedUrl,
       title: input.title,
       description: input.description ?? null,
       folder_id: input.folderId ?? null,
