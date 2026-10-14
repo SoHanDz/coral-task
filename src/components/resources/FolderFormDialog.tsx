@@ -19,6 +19,9 @@ import type { LinkFolder } from "@/lib/resources/types";
 
 interface FolderFormDialogProps {
   trigger: ReactElement;
+  /** Set false when `trigger` isn't a real <button> (e.g. a dialog opened
+   * programmatically via `open`, with no visible trigger element). */
+  nativeButton?: boolean;
   folder?: LinkFolder;
   /** Omit both to let the dialog manage its own open state (the common case,
    * opened by clicking `trigger`). Pass both when another component needs
@@ -32,6 +35,7 @@ interface FolderFormDialogProps {
 
 export function FolderFormDialog({
   trigger,
+  nativeButton = true,
   folder,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
@@ -63,7 +67,7 @@ export function FolderFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
+      <DialogTrigger render={trigger} nativeButton={nativeButton} />
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{folder ? "Sửa thư mục" : "Thư mục mới"}</DialogTitle>
@@ -90,8 +94,8 @@ export function FolderFormDialog({
                   aria-label={`Màu ${option}`}
                   onClick={() => setColor(option)}
                   className={cn(
-                    "size-7 rounded-full ring-offset-2",
-                    color === option && "ring-2 ring-slate-900"
+                    "size-7 rounded-full ring-offset-2 ring-offset-background",
+                    color === option && "ring-2 ring-foreground"
                   )}
                   style={{ backgroundColor: option }}
                 />
@@ -109,8 +113,8 @@ export function FolderFormDialog({
                   aria-label={optionName}
                   onClick={() => setIcon(optionName)}
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600",
-                    icon === optionName && "border-slate-900 bg-slate-900 text-white"
+                    "flex size-8 items-center justify-center rounded-lg border border-border text-muted-foreground",
+                    icon === optionName && "border-primary bg-primary text-primary-foreground"
                   )}
                 >
                   <Icon className="size-4" />

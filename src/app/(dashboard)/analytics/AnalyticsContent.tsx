@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getTasks } from "@/app/actions/tasks";
 import { getEvents } from "@/app/actions/events";
 import { EventsListSection } from "@/components/events/EventsListSection";
@@ -6,6 +7,7 @@ import { YearGrid } from "@/components/year-grid/YearGrid";
 import { isOverdue } from "@/lib/tasks/overdue";
 
 export async function AnalyticsContent() {
+  await connection();
   const [tasks, events] = await Promise.all([getTasks(), getEvents()]);
   const overdueCount = tasks.filter((task) => isOverdue(task)).length;
 

@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { getTasks } from "@/app/actions/tasks";
 import { getEvents } from "@/app/actions/events";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
@@ -6,6 +7,7 @@ import { OverviewBoard } from "@/components/dashboard/OverviewBoard";
 import { TopBar } from "@/components/layout/TopBar";
 
 export async function OverviewContent() {
+  await connection();
   const [tasks, events, email] = await Promise.all([getTasks(), getEvents(), getCurrentUserEmail()]);
   const overdueCount = tasks.filter((task) => task.status === "pending" && isOverdue(task)).length;
 

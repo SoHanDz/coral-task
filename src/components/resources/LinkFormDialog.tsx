@@ -24,6 +24,9 @@ import type { LinkFolder, QuickLink } from "@/lib/resources/types";
 
 interface LinkFormDialogProps {
   trigger: ReactElement;
+  /** Set false when `trigger` isn't a real <button> (e.g. a dialog opened
+   * programmatically via `open`, with no visible trigger element). */
+  nativeButton?: boolean;
   link?: QuickLink;
   folders: LinkFolder[];
   /** Omit both to let the dialog manage its own open state. Pass both when
@@ -44,6 +47,7 @@ const NO_FOLDER_VALUE = "__none__";
 
 export function LinkFormDialog({
   trigger,
+  nativeButton = true,
   link,
   folders,
   open: controlledOpen,
@@ -113,7 +117,7 @@ export function LinkFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger render={trigger} />
+      <DialogTrigger render={trigger} nativeButton={nativeButton} />
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{link ? "Sửa liên kết" : "Thêm liên kết mới"}</DialogTitle>
@@ -161,9 +165,11 @@ export function LinkFormDialog({
                 <SelectValue placeholder="Chưa phân loại" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={NO_FOLDER_VALUE}>Chưa phân loại</SelectItem>
+                <SelectItem value={NO_FOLDER_VALUE} label="Chưa phân loại">
+                  Chưa phân loại
+                </SelectItem>
                 {folders.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.id}>
+                  <SelectItem key={folder.id} value={folder.id} label={folder.name}>
                     {folder.name}
                   </SelectItem>
                 ))}

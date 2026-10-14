@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ResourcesLoading() {
   return (
-    <div className="min-h-screen bg-slate-100/70">
+    <div className="min-h-screen bg-background">
       <div className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-4 sm:px-8">
         <Skeleton className="h-7 w-32" />
       </div>

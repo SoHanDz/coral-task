@@ -4,6 +4,7 @@ import { Folder as FolderIcon, PencilIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkRow } from "@/components/resources/LinkRow";
 import { getIconComponent } from "@/components/resources/icon-options";
+import { cn } from "@/lib/utils";
 import type { LinkFolder, QuickLink } from "@/lib/resources/types";
 
 interface FolderCardProps {
@@ -36,20 +37,26 @@ export function FolderCard({
   });
 
   return (
-    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-2xl border bg-card p-6 shadow-sm",
+        folder ? "border-border border-t-2" : "border-dashed border-border"
+      )}
+      style={folder ? { borderTopColor: folder.color } : undefined}
+    >
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span
             className="flex size-8 items-center justify-center rounded-lg text-white"
-            style={{ backgroundColor: folder?.color ?? "#64748b" }}
+            style={{ backgroundColor: folder?.color ?? "var(--muted-foreground)" }}
           >
             {/* eslint-disable-next-line react-hooks/static-components -- Icon is picked from a fixed, stable set of icon components, never created dynamically here. */}
             <Icon className="size-4" />
           </span>
-          <h3 className="text-sm font-semibold text-slate-900">
+          <h3 className="text-sm font-semibold text-foreground">
             {folder ? folder.name : "Chưa phân loại"}
           </h3>
-          <span className="text-xs text-slate-400">{sortedLinks.length}</span>
+          <span className="text-xs text-muted-foreground">{sortedLinks.length}</span>
         </div>
 
         {folder && onEditFolder && onDeleteFolder && (
@@ -77,9 +84,9 @@ export function FolderCard({
       </div>
 
       {sortedLinks.length === 0 ? (
-        <p className="text-sm text-slate-400">Chưa có liên kết nào.</p>
+        <p className="text-sm text-muted-foreground">Chưa có liên kết nào.</p>
       ) : (
-        <div className="flex flex-col divide-y divide-slate-100">
+        <div className="flex flex-col divide-y divide-border">
           {sortedLinks.map((link) => (
             <LinkRow
               key={link.id}

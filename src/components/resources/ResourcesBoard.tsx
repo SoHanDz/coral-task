@@ -59,6 +59,10 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
     );
   }, [folders, links, normalizedQuery]);
 
+  const uncategorizedLinks = linksFor(null, null);
+  const hasNoResults =
+    normalizedQuery !== "" && visibleFolders.length === 0 && uncategorizedLinks.length === 0;
+
   function linksFor(folderId: string | null, folder: LinkFolder | null) {
     const own = links.filter((link) => link.folderId === folderId);
     if (!normalizedQuery) return own;
@@ -143,7 +147,7 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+          <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -172,38 +176,47 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
         />
       </div>
 
-      {isPending && <p className="text-xs text-slate-500">Đang cập nhật…</p>}
+      {isPending && <p className="text-xs text-muted-foreground">Đang cập nhật…</p>}
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {visibleFolders.map((folder) => (
-          <FolderCard
-            key={folder.id}
-            folder={folder}
-            links={linksFor(folder.id, folder)}
-            onOpenLink={handleOpenLink}
-            onCopyLink={handleCopyLink}
-            onToggleLinkPinned={handleTogglePinned}
-            onEditLink={setEditingLink}
-            onDeleteLink={handleDeleteLink}
-            onEditFolder={setEditingFolder}
-            onDeleteFolder={handleDeleteFolder}
-          />
-        ))}
+      {hasNoResults ? (
+        <p className="rounded-2xl border border-dashed border-border py-12 text-center text-sm text-muted-foreground">
+          Không tìm thấy liên kết hoặc thư mục nào cho &ldquo;{query.trim()}&rdquo;.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {visibleFolders.map((folder) => (
+            <FolderCard
+              key={folder.id}
+              folder={folder}
+              links={linksFor(folder.id, folder)}
+              onOpenLink={handleOpenLink}
+              onCopyLink={handleCopyLink}
+              onToggleLinkPinned={handleTogglePinned}
+              onEditLink={setEditingLink}
+              onDeleteLink={handleDeleteLink}
+              onEditFolder={setEditingFolder}
+              onDeleteFolder={handleDeleteFolder}
+            />
+          ))}
 
-        <FolderCard
-          folder={null}
-          links={linksFor(null, null)}
-          onOpenLink={handleOpenLink}
-          onCopyLink={handleCopyLink}
-          onToggleLinkPinned={handleTogglePinned}
-          onEditLink={setEditingLink}
-          onDeleteLink={handleDeleteLink}
-        />
-      </div>
+          {uncategorizedLinks.length > 0 || normalizedQuery === "" ? (
+            <FolderCard
+              folder={null}
+              links={uncategorizedLinks}
+              onOpenLink={handleOpenLink}
+              onCopyLink={handleCopyLink}
+              onToggleLinkPinned={handleTogglePinned}
+              onEditLink={setEditingLink}
+              onDeleteLink={handleDeleteLink}
+            />
+          ) : null}
+        </div>
+      )}
 
       {editingLink && (
         <LinkFormDialog
           trigger={<span />}
+          nativeButton={false}
           link={editingLink}
           folders={folders}
           open={editingLink !== null}
@@ -224,6 +237,7 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
       {editingFolder && (
         <FolderFormDialog
           trigger={<span />}
+          nativeButton={false}
           folder={editingFolder}
           open={editingFolder !== null}
           onOpenChange={(next) => {

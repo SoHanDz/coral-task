@@ -1,8 +1,10 @@
 import { LogOut } from "lucide-react";
+import { connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/login/actions";
 
 export async function SidebarProfile() {
+  await connection();
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
 
