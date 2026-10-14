@@ -1,9 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addDays, addMonths, addWeeks, endOfDay, startOfDay } from "date-fns";
+import { addDays, addMonths, addWeeks, endOfDay, parseISO, startOfDay } from "date-fns";
 import { requireUser } from "@/lib/supabase/require-user";
-import { toDateKey } from "@/lib/date/date-key";
 import type { Recurrence, Subtask, Task, TaskStatus } from "@/lib/tasks/types";
 
 interface TaskRow {
@@ -28,9 +27,12 @@ function mapTask(row: TaskRow): Task {
     description: row.description,
     status: row.status,
     recurrence: row.recurrence,
-    dueDate: row.due_date ? new Date(row.due_date) : null,
-    createdAt: new Date(row.created_at),
-    completedAt: row.completed_at ? new Date(row.completed_at) : null,
+    // parseISO (not `new Date(string)`) so a date-only value is read as
+    // local midnight instead of UTC midnight, which is what shifts a day
+    // back once formatted in GMT+7.
+    dueDate: row.due_date ? parseISO(row.due_date) : null,
+    createdAt: parseISO(row.created_at),
+    completedAt: row.completed_at ? parseISO(row.completed_at) : null,
     subtasks: row.subtasks ?? [],
   };
 }
@@ -85,7 +87,7 @@ export async function getOverdueTasks(): Promise<Task[]> {
     .select(TASK_COLUMNS)
     .eq("user_id", userId)
     .eq("status", "pending")
-    .lt("due_date", toDateKey(new Date()));
+    .lt("due_date", startOfDay(new Date()).toISOString());
 
   if (error) throw new Error(error.message);
   return (data as TaskRow[]).map(mapTask);
@@ -190,6 +192,18 @@ export async function updateTaskStatus(id: string, status: TaskStatus): Promise<
     if (insertError) throw new Error(insertError.message);
   }
 
+  revalidateDashboard();
+}
+
+export async function rescheduleTaskToToday(id: string): Promise<void> {
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase
+    .from("tasks")
+    .update({ due_date: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
   revalidateDashboard();
 }
 

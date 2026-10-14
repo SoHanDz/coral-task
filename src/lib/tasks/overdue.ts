@@ -1,4 +1,4 @@
-import { endOfDay, formatDistanceStrict, isBefore, startOfDay } from "date-fns";
+import { differenceInCalendarDays, endOfDay, formatDistanceStrict, isBefore, startOfDay } from "date-fns";
 import { vi } from "date-fns/locale";
 import type { Task } from "@/lib/tasks/types";
 
@@ -9,6 +9,12 @@ import type { Task } from "@/lib/tasks/types";
 export function isOverdue(task: Task, referenceDate: Date = new Date()): boolean {
   if (task.status !== "pending" || !task.dueDate) return false;
   return isBefore(startOfDay(task.dueDate), startOfDay(referenceDate));
+}
+
+/** Days between a task's due date and today, for the "Trễ N ngày" footnote. */
+export function getOverdueDays(task: Task, referenceDate: Date = new Date()): number | null {
+  if (!isOverdue(task, referenceDate) || !task.dueDate) return null;
+  return differenceInCalendarDays(startOfDay(referenceDate), startOfDay(task.dueDate));
 }
 
 export interface CompletionDelay {

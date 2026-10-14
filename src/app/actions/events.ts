@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { parseISO } from "date-fns";
 import { requireUser } from "@/lib/supabase/require-user";
 import { toDateKey } from "@/lib/date/date-key";
 import type { EventItem } from "@/lib/events/types";
@@ -19,7 +20,12 @@ function mapEvent(row: EventRow): EventItem {
   return {
     id: row.id,
     title: row.title,
-    eventDate: new Date(`${row.event_date}T00:00:00`),
+    // event_date is a date-only string ("yyyy-MM-dd"). parseISO reads it as
+    // local midnight — unlike `new Date("yyyy-MM-dd")`, which the spec
+    // mandates be parsed as UTC midnight and shifts a day back once
+    // formatted in GMT+7. It also tolerates a row that already carries a
+    // time/offset (a timestamptz column) instead of double-appending one.
+    eventDate: parseISO(row.event_date),
     isRecurring: row.is_recurring,
   };
 }

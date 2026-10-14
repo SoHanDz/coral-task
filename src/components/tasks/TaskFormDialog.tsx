@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCompletionDelay } from "@/lib/tasks/overdue";
-import { RECURRENCE_LABELS, type Recurrence, type Subtask, type Task } from "@/lib/tasks/types";
+import { RECURRENCE_LABELS, type Recurrence, type Subtask, type Task, type TaskStatus } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 
 export interface TaskFormInput {
@@ -41,6 +41,8 @@ interface TaskFormDialogProps {
   task?: Task;
   onSubmit: (input: TaskFormInput) => void;
   onDelete?: (id: string) => void;
+  /** Called the instant checking/unchecking a subtask flips the parent task's completion. */
+  onStatusChange?: (id: string, status: TaskStatus) => void;
 }
 
 const RECURRENCE_OPTIONS = Object.keys(RECURRENCE_LABELS) as Recurrence[];
@@ -49,7 +51,7 @@ function defaultDueDate(): Date {
   return endOfDay(startOfToday());
 }
 
-export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDialogProps) {
+export function TaskFormDialog({ trigger, task, onSubmit, onDelete, onStatusChange }: TaskFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,6 +59,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
   const [recurrence, setRecurrence] = useState<Recurrence>("none");
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
+  const [status, setStatus] = useState<TaskStatus>(task?.status ?? "pending");
 
   function resetForm() {
     setTitle(task?.title ?? "");
@@ -65,6 +68,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
     setRecurrence(task?.recurrence ?? "none");
     setSubtasks(task?.subtasks ?? []);
     setSubtaskInput("");
+    setStatus(task?.status ?? "pending");
   }
 
   function handleAddSubtask() {
@@ -73,8 +77,22 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
     setSubtaskInput("");
   }
 
+  // Finishing the last subtask auto-completes the task; unchecking one on an
+  // auto-completed task reopens it, so the checklist and the task status
+  // never fall out of sync.
   function handleToggleSubtask(id: string) {
-    setSubtasks((prev) => prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s)));
+    setSubtasks((prev) => {
+      const next = prev.map((s) => (s.id === id ? { ...s, completed: !s.completed } : s));
+      const allDone = next.length > 0 && next.every((s) => s.completed);
+      const nextStatus: TaskStatus = allDone ? "completed" : "pending";
+
+      if (task && nextStatus !== status) {
+        setStatus(nextStatus);
+        onStatusChange?.(task.id, nextStatus);
+      }
+
+      return next;
+    });
   }
 
   function handleRemoveSubtask(id: string) {
@@ -112,7 +130,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
       }}
     >
       <DialogTrigger render={trigger} />
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-[520px] w-full p-6 bg-white rounded-2xl border-none shadow-xl overflow-hidden">
         <DialogHeader>
           <DialogTitle>{task ? "Sửa công việc" : "Công việc mới"}</DialogTitle>
         </DialogHeader>
@@ -126,7 +144,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
           );
         })()}
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
             <Label htmlFor="task-title">Tiêu đề</Label>
             <Input
               id="task-title"
@@ -137,7 +155,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
             <Label htmlFor="task-description">Mô tả</Label>
             <Textarea
               id="task-description"
@@ -147,12 +165,12 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
             />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
             <Label htmlFor="task-due-date">Hạn chót</Label>
             <DateTimePicker id="task-due-date" value={dueDate} onChange={setDueDate} />
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
             <Label htmlFor="task-recurrence">Lặp lại</Label>
             <Select value={recurrence} onValueChange={(value) => setRecurrence(value as Recurrence)}>
               <SelectTrigger id="task-recurrence">
@@ -168,24 +186,32 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
             </Select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
+          <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
             <Label>Sub-task</Label>
             {subtasks.length > 0 && (
-              <ul className="flex flex-col gap-1.5">
+              <ul className="flex w-full min-w-0 flex-col gap-1.5 box-border">
                 {subtasks.map((subtask) => (
                   <li
                     key={subtask.id}
-                    className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-700"
+                    className="flex w-full min-w-0 flex-1 items-center justify-between gap-2 overflow-hidden rounded-lg bg-slate-50 px-3 py-1.5 text-sm text-slate-700 box-border"
                   >
-                    <Checkbox checked={subtask.completed} onCheckedChange={() => handleToggleSubtask(subtask.id)} />
-                    <span className={cn("flex-1 truncate", subtask.completed && "text-slate-400 line-through")}>
-                      {subtask.title}
-                    </span>
+                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+                      <Checkbox checked={subtask.completed} onCheckedChange={() => handleToggleSubtask(subtask.id)} />
+                      <span
+                        className={cn(
+                          "block min-w-0 flex-1 truncate",
+                          subtask.completed && "text-slate-400 line-through"
+                        )}
+                        title={subtask.title}
+                      >
+                        {subtask.title}
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveSubtask(subtask.id)}
                       aria-label="Xóa sub-task"
-                      className="text-slate-400 hover:text-destructive"
+                      className="shrink-0 text-slate-400 hover:text-destructive"
                     >
                       <XIcon className="size-3.5" />
                     </button>
@@ -193,8 +219,9 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
                 ))}
               </ul>
             )}
-            <div className="flex gap-2">
+            <div className="flex w-full min-w-0 flex-1 items-center gap-2 box-border">
               <Input
+                className="min-w-0 flex-1"
                 value={subtaskInput}
                 onChange={(e) => setSubtaskInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -205,14 +232,14 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
                 }}
                 placeholder="Thêm sub-task"
               />
-              <Button type="button" variant="outline" size="icon" onClick={handleAddSubtask}>
+              <Button type="button" variant="outline" size="icon" className="shrink-0" onClick={handleAddSubtask}>
                 <PlusIcon className="size-4" />
               </Button>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button type="submit" className="flex-1">
+          <div className="flex w-full min-w-0 items-center gap-3 box-border">
+            <Button type="submit" className="min-w-0 flex-1">
               {task ? "Lưu thay đổi" : "Thêm công việc"}
             </Button>
             {task && onDelete && (
@@ -220,6 +247,7 @@ export function TaskFormDialog({ trigger, task, onSubmit, onDelete }: TaskFormDi
                 type="button"
                 variant="destructive"
                 size="icon"
+                className="shrink-0"
                 aria-label="Xóa công việc"
                 onClick={() => {
                   onDelete(task.id);
