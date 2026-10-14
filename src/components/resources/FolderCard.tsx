@@ -43,6 +43,7 @@ export function FolderCard({
             className="flex size-8 items-center justify-center rounded-lg text-white"
             style={{ backgroundColor: folder?.color ?? "#64748b" }}
           >
+            {/* eslint-disable-next-line react-hooks/static-components -- Icon is picked from a fixed, stable set of icon components, never created dynamically here. */}
             <Icon className="size-4" />
           </span>
           <h3 className="text-sm font-semibold text-slate-900">
