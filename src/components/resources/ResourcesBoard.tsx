@@ -13,6 +13,7 @@ import {
   createLink,
   deleteFolder,
   deleteLink,
+  toggleFolderPinned,
   toggleLinkPinned,
   updateFolder,
   updateLink,
@@ -51,12 +52,19 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
   const normalizedQuery = query.trim().toLowerCase();
 
   const visibleFolders = useMemo(() => {
-    if (!normalizedQuery) return folders;
-    return folders.filter(
-      (folder) =>
-        folderNameMatchesQuery(folder, normalizedQuery) ||
-        links.some((link) => link.folderId === folder.id && linkMatchesQuery(link, normalizedQuery))
-    );
+    const matching = normalizedQuery
+      ? folders.filter(
+          (folder) =>
+            folderNameMatchesQuery(folder, normalizedQuery) ||
+            links.some(
+              (link) => link.folderId === folder.id && linkMatchesQuery(link, normalizedQuery)
+            )
+        )
+      : folders;
+    return [...matching].sort((a, b) => {
+      if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+      return 0;
+    });
   }, [folders, links, normalizedQuery]);
 
   const uncategorizedLinks = linksFor(null, null);
@@ -93,6 +101,13 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
   function handleDeleteFolder(id: string) {
     startTransition(async () => {
       await deleteFolder(id);
+      router.refresh();
+    });
+  }
+
+  function handleToggleFolderPinned(id: string, next: boolean) {
+    startTransition(async () => {
+      await toggleFolderPinned(id, next);
       router.refresh();
     });
   }
@@ -196,6 +211,7 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
               onDeleteLink={handleDeleteLink}
               onEditFolder={setEditingFolder}
               onDeleteFolder={handleDeleteFolder}
+              onToggleFolderPinned={handleToggleFolderPinned}
             />
           ))}
 

@@ -10,6 +10,7 @@ interface FolderRow {
   name: string;
   color: string;
   icon: string;
+  is_pinned: boolean;
   created_at: string;
 }
 
@@ -24,7 +25,7 @@ interface LinkRow {
   created_at: string;
 }
 
-const FOLDER_COLUMNS = "id, name, color, icon, created_at";
+const FOLDER_COLUMNS = "id, name, color, icon, is_pinned, created_at";
 const LINK_COLUMNS =
   "id, folder_id, title, url, description, image_url, is_pinned, created_at";
 
@@ -34,6 +35,7 @@ function mapFolder(row: FolderRow): LinkFolder {
     name: row.name,
     color: row.color,
     icon: row.icon,
+    isPinned: row.is_pinned,
     createdAt: new Date(row.created_at),
   };
 }
@@ -192,6 +194,18 @@ export async function deleteLink(id: string): Promise<void> {
   const { error } = await supabase
     .from("quick_links")
     .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+
+  if (error) throw new Error(error.message);
+  revalidateResources();
+}
+
+export async function toggleFolderPinned(id: string, isPinned: boolean): Promise<void> {
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase
+    .from("link_folders")
+    .update({ is_pinned: isPinned })
     .eq("id", id)
     .eq("user_id", userId);
 

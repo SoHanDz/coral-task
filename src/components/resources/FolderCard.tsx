@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder as FolderIcon, PencilIcon, Trash2Icon } from "lucide-react";
+import { Folder as FolderIcon, PencilIcon, PinIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { LinkRow } from "@/components/resources/LinkRow";
 import { getIconComponent } from "@/components/resources/icon-options";
@@ -17,6 +17,7 @@ interface FolderCardProps {
   onDeleteLink: (id: string) => void;
   onEditFolder?: (folder: LinkFolder) => void;
   onDeleteFolder?: (id: string) => void;
+  onToggleFolderPinned?: (id: string, next: boolean) => void;
 }
 
 export function FolderCard({
@@ -29,6 +30,7 @@ export function FolderCard({
   onDeleteLink,
   onEditFolder,
   onDeleteFolder,
+  onToggleFolderPinned,
 }: FolderCardProps) {
   const Icon = folder ? getIconComponent(folder.icon) : FolderIcon;
   const sortedLinks = [...links].sort((a, b) => {
@@ -61,6 +63,17 @@ export function FolderCard({
 
         {folder && onEditFolder && onDeleteFolder && (
           <div className="flex items-center gap-1">
+            {onToggleFolderPinned && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={folder.isPinned ? "Bỏ ghim thư mục" : "Ghim thư mục lên đầu"}
+                onClick={() => onToggleFolderPinned(folder.id, !folder.isPinned)}
+              >
+                <PinIcon className={cn("size-4", folder.isPinned && "fill-current text-amber-500")} />
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -86,7 +99,7 @@ export function FolderCard({
       {sortedLinks.length === 0 ? (
         <p className="text-sm text-muted-foreground">Chưa có liên kết nào.</p>
       ) : (
-        <div className="flex flex-col divide-y divide-border">
+        <div className="flex max-h-[280px] flex-col divide-y divide-border overflow-y-auto">
           {sortedLinks.map((link) => (
             <LinkRow
               key={link.id}

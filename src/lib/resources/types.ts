@@ -3,6 +3,7 @@ export interface LinkFolder {
   name: string;
   color: string;
   icon: string;
+  isPinned: boolean;
   createdAt: Date;
 }
 
