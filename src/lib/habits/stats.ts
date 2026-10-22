@@ -1,4 +1,4 @@
-import { addDays, isBefore, isSameDay, subDays } from "date-fns";
+import { addDays, parseISO, subDays } from "date-fns";
 import { toDateKey } from "@/lib/date/date-key";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
@@ -18,7 +18,7 @@ function logsByDate(logs: HabitLog[], habitId: string): Map<string, boolean> {
  * every habit that existed by then was completed that day; else "missed".
  */
 export function getDayState(habits: Habit[], logs: HabitLog[], date: Date): HabitDayState {
-  const applicable = habits.filter((habit) => !isBefore(date, habit.createdAt) || isSameDay(date, habit.createdAt));
+  const applicable = habits.filter((habit) => toDateKey(habit.createdAt) <= toDateKey(date));
   if (applicable.length === 0) return "no-habit";
 
   const dateKey = toDateKey(date);
@@ -54,7 +54,7 @@ export function getBestStreak(habitId: string, logs: HabitLog[]): number {
   let previousKey: string | null = null;
 
   for (const dateKey of completedDates) {
-    if (previousKey !== null && toDateKey(addDays(new Date(previousKey), 1)) === dateKey) {
+    if (previousKey !== null && toDateKey(addDays(parseISO(previousKey), 1)) === dateKey) {
       current += 1;
     } else {
       current = 1;
@@ -71,9 +71,9 @@ export function getLongestBreak(habitId: string, logs: HabitLog[], createdAt: Da
   const byDate = logsByDate(logs, habitId);
   let longest = 0;
   let current = 0;
-  let cursor = createdAt;
+  let cursor = parseISO(toDateKey(createdAt));
 
-  while (!isBefore(today, cursor)) {
+  while (toDateKey(cursor) <= toDateKey(today)) {
     const completed = byDate.get(toDateKey(cursor)) === true;
     current = completed ? 0 : current + 1;
     longest = Math.max(longest, current);
