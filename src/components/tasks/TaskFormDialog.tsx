@@ -252,6 +252,7 @@ export function TaskFormDialog({
                 type="time"
                 value={dueTime}
                 onChange={(e) => setDueTime(e.target.value)}
+                required
               />
             </div>
           )}

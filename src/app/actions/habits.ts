@@ -75,6 +75,8 @@ export async function createHabit(input: {
   description: string | null;
   dueTime: string;
 }): Promise<Habit> {
+  if (!input.dueTime) throw new Error("dueTime is required");
+
   const { supabase, userId } = await requireUser();
   const { data, error } = await supabase
     .from("habits")
@@ -130,6 +132,17 @@ export async function setHabitLogStatus(
   completed: boolean
 ): Promise<void> {
   const { supabase, userId } = await requireUser();
+
+  const { data: habit, error: habitError } = await supabase
+    .from("habits")
+    .select("id")
+    .eq("id", habitId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (habitError) throw new Error(habitError.message);
+  if (!habit) throw new Error("Habit not found");
+
   const { error } = await supabase.from("habit_logs").upsert(
     {
       habit_id: habitId,

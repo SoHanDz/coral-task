@@ -88,6 +88,10 @@ export async function createTask(input: {
   endDate: Date;
   subtasks: Subtask[];
 }): Promise<Task> {
+  if (input.endDate.getTime() < input.startDate.getTime()) {
+    throw new Error("endDate must be on or after startDate");
+  }
+
   const { supabase, userId } = await requireUser();
   const { data, error } = await supabase
     .from("tasks")
@@ -118,6 +122,10 @@ export async function updateTask(
     subtasks: Subtask[];
   }
 ): Promise<void> {
+  if (input.endDate.getTime() < input.startDate.getTime()) {
+    throw new Error("endDate must be on or after startDate");
+  }
+
   const { supabase, userId } = await requireUser();
   const { error } = await supabase
     .from("tasks")
