@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getTasks } from "@/app/actions/tasks";
+import { getHabits, getHabitLogs } from "@/app/actions/habits";
 import { getEvents } from "@/app/actions/events";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
 import { isOverdue } from "@/lib/tasks/overdue";
@@ -8,7 +9,13 @@ import { TopBar } from "@/components/layout/TopBar";
 
 export async function OverviewContent() {
   await connection();
-  const [tasks, events, email] = await Promise.all([getTasks(), getEvents(), getCurrentUserEmail()]);
+  const [tasks, habits, habitLogs, events, email] = await Promise.all([
+    getTasks(),
+    getHabits(),
+    getHabitLogs(),
+    getEvents(),
+    getCurrentUserEmail(),
+  ]);
   const overdueCount = tasks.filter((task) => task.status === "pending" && isOverdue(task)).length;
 
   return (
@@ -16,7 +23,7 @@ export async function OverviewContent() {
       <TopBar email={email} overdueCount={overdueCount} />
 
       <div className="mx-auto max-w-6xl p-4 sm:p-8">
-        <OverviewBoard tasks={tasks} events={events} />
+        <OverviewBoard tasks={tasks} habits={habits} habitLogs={habitLogs} events={events} />
       </div>
     </div>
   );

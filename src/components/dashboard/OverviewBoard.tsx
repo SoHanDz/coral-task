@@ -6,20 +6,23 @@ import { TodayWidget } from "@/components/dashboard/TodayWidget";
 import { EventsListSection } from "@/components/events/EventsListSection";
 import { Card, CardContent } from "@/components/ui/card";
 import type { EventItem } from "@/lib/events/types";
+import type { Habit, HabitLog } from "@/lib/habits/types";
 import type { Task } from "@/lib/tasks/types";
 
 interface OverviewBoardProps {
   tasks: Task[];
+  habits: Habit[];
+  habitLogs: HabitLog[];
   events: EventItem[];
 }
 
-export function OverviewBoard({ tasks, events }: OverviewBoardProps) {
+export function OverviewBoard({ tasks, habits, habitLogs, events }: OverviewBoardProps) {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
       <div className="flex flex-col gap-8 lg:col-span-2">
-        <TasksOverviewSection tasks={tasks} selectedDate={selectedDate} />
+        <TasksOverviewSection tasks={tasks} habits={habits} habitLogs={habitLogs} selectedDate={selectedDate} />
       </div>
 
       <div className="flex flex-col gap-8 lg:sticky lg:top-8">
