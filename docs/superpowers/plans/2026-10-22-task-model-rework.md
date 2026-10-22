@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `public.tasks` columns `start_date timestamptz not null`, `end_date timestamptz not null` (replacing `due_date`/`recurrence`, which are gone). `public.habits(id, user_id, title, description, due_time, created_at)`. `public.habit_logs(id, habit_id, user_id, log_date, completed_at)` with a unique constraint on `(habit_id, log_date)` — every later task's upsert logic depends on that constraint existing.
 
-- [ ] **Step 1: Write the migration**
+- [x] **Step 1: Write the migration**
 
 ```sql
 -- Task model rework: one-time tasks get a start/end window instead of a
@@ -121,7 +121,7 @@ select * from public.habit_logs limit 1;
 ```
 Expected: both return an empty result set with no error (tables exist, RLS doesn't error out for an authenticated query — 0 rows is correct since nothing's been inserted yet).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add supabase/migrations/0007_task_habit_rework.sql
@@ -140,7 +140,7 @@ git commit -m "feat: migrate tasks to start/end window, add habits/habit_logs ta
 - Produces: `Task { id, title, description, startDate: Date, endDate: Date, status, createdAt, completedAt, subtasks }` (no `recurrence`, no nullable dates). `Habit { id, title, description, dueTime: string /* "HH:mm" */, createdAt }`. `HabitLog { habitId, logDate: string /* "yyyy-MM-dd" */, completed: boolean, completedAt: Date | null }`.
 - Consumes: nothing (leaf types).
 
-- [ ] **Step 1: Rewrite `src/lib/tasks/types.ts`**
+- [x] **Step 1: Rewrite `src/lib/tasks/types.ts`**
 
 ```ts
 export type TaskStatus = "pending" | "completed";
@@ -169,7 +169,7 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
 };
 ```
 
-- [ ] **Step 2: Create `src/lib/habits/types.ts`**
+- [x] **Step 2: Create `src/lib/habits/types.ts`**
 
 ```ts
 export interface Habit {
@@ -188,12 +188,12 @@ export interface HabitLog {
 }
 ```
 
-- [ ] **Step 3: Run the type checker and confirm the expected failures (red)**
+- [x] **Step 3: Run the type checker and confirm the expected failures (red)**
 
 Run: `npx tsc --noEmit`
 Expected: a list of errors, all about `recurrence`, `Recurrence`, `RECURRENCE_LABELS`, or `dueDate` not existing — in `src/app/actions/tasks.ts`, `src/lib/tasks/overdue.ts`, `src/lib/tasks/stats.ts`, `src/components/tasks/TaskFormDialog.tsx`, `src/components/tasks/TaskForm.tsx`, `src/components/tasks/TaskItem.tsx`, `src/components/tasks/TaskDayItem.tsx`, `src/components/tasks/TasksOverviewSection.tsx`, `src/components/dashboard/DashboardCalendarCard.tsx`, `src/hooks/use-tasks.ts`, `src/app/dev/tasks/TasksDevClient.tsx`. No error should be about anything else — if one is, stop and investigate before continuing.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/tasks/types.ts src/lib/habits/types.ts
@@ -211,7 +211,7 @@ git commit -m "feat: replace Task.dueDate/recurrence with start/end window, add 
 - Consumes: `Task`, `Subtask`, `TaskStatus` from `@/lib/tasks/types` (Task 2).
 - Produces: `getTasks(): Promise<Task[]>`, `getTasksForDate(date: Date): Promise<Task[]>` (range-overlap, not exact match), `getOverdueTasks(): Promise<Task[]>`, `createTask(input: { title, description, startDate: Date, endDate: Date, subtasks }): Promise<Task>`, `updateTask(id, input: same shape as createTask's input): Promise<void>`, `updateTaskStatus(id, status): Promise<void>` (no longer clones a next instance — this is the bug fix), `rescheduleTaskToToday(id): Promise<void>`, `deleteTask(id): Promise<void>`.
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```ts
 "use server";
@@ -391,12 +391,12 @@ export async function deleteTask(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no more errors reference `src/app/actions/tasks.ts`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/actions/tasks.ts
@@ -414,7 +414,7 @@ git commit -m "fix: drop recurrence row-cloning, query tasks by start/end window
 - Consumes: `Habit`, `HabitLog` from `@/lib/habits/types` (Task 2); `requireUser` from `@/lib/supabase/require-user`.
 - Produces: `getHabits(): Promise<Habit[]>`, `getHabitLogs(): Promise<HabitLog[]>` (every log for the user, unfiltered — the Todo page filters client-side by day the same way it already does for tasks), `createHabit(input: { title, description, dueTime }): Promise<Habit>`, `updateHabit(id, input): Promise<void>`, `deleteHabit(id): Promise<void>`, `setHabitLogStatus(habitId: string, logDate: string, completed: boolean): Promise<void>` — upserts on `(habit_id, log_date)`, the one function later UI tasks call to toggle a habit for a day.
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```ts
 "use server";
@@ -564,12 +564,12 @@ export async function setHabitLogStatus(
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/app/actions/habits.ts`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/app/actions/habits.ts
@@ -587,7 +587,7 @@ git commit -m "feat: add habit CRUD and upsert-based daily completion log action
 - Consumes: `Task` from `@/lib/tasks/types` (Task 2) — now with non-nullable `endDate`.
 - Produces: `isOverdue(task, referenceDate?): boolean`, `getOverdueDays(task, referenceDate?): number | null`, `getCompletionDelay(task): CompletionDelay | null` — same signatures as before, callers in later tasks are unaffected.
 
-- [ ] **Step 1: Replace `dueDate` with `endDate`, drop the now-unnecessary null checks**
+- [x] **Step 1: Replace `dueDate` with `endDate`, drop the now-unnecessary null checks**
 
 ```ts
 import { differenceInCalendarDays, endOfDay, formatDistanceStrict, isBefore, startOfDay } from "date-fns";
@@ -632,12 +632,12 @@ export function getCompletionDelay(task: Task): CompletionDelay | null {
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/lib/tasks/overdue.ts`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/tasks/overdue.ts
@@ -655,7 +655,7 @@ git commit -m "refactor: key task overdue/delay logic off endDate"
 - Consumes: `Task` from `@/lib/tasks/types` (Task 2); `toDateKey` from `@/lib/date/date-key`.
 - Produces: `getDailyTaskStats(tasks: Task[]): Map<string, { completed: number; total: number }>` — same signature as before (used by `YearGrid` on the Analytics page, untouched by this plan).
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```ts
 import { eachDayOfInterval } from "date-fns";
@@ -680,12 +680,12 @@ export function getDailyTaskStats(tasks: Task[]): Map<string, { completed: numbe
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/lib/tasks/stats.ts`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/tasks/stats.ts
@@ -703,7 +703,7 @@ git commit -m "refactor: compute daily task stats across each task's start/end w
 - Consumes: `Subtask, Task, TaskStatus` from `@/lib/tasks/types`; `getCompletionDelay` from `@/lib/tasks/overdue` (Task 5).
 - Produces: `TaskFormInput { title, description, startDate: Date, endDate: Date, subtasks }`, `HabitFormInput { title, description, dueTime: string }`, and the component `TaskFormDialog({ trigger, task?, onSubmitTask, onSubmitHabit?, onDelete?, onStatusChange? })`. `onSubmitHabit` is optional because editing an existing `task` never needs it (the "Loại" selector only appears when creating a brand-new item). Tasks 8 and 10 depend on these exact prop names.
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```tsx
 "use client";
@@ -1045,12 +1045,12 @@ export function TaskFormDialog({
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/components/tasks/TaskFormDialog.tsx` itself (errors in its callers are expected and fixed in Tasks 8 and 10).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/tasks/TaskFormDialog.tsx
@@ -1068,7 +1068,7 @@ git commit -m "feat: add once/daily type selector and start/end pickers to TaskF
 - Consumes: `TaskFormDialog` with prop `onSubmitTask` (renamed from `onSubmit` in Task 7); `getOverdueDays`, `isOverdue` from `@/lib/tasks/overdue` (Task 5); `Task`, `TaskStatus` from `@/lib/tasks/types`.
 - Produces: same `TaskDayItem({ task, onToggleStatus, onEdit, onDelete, onRescheduleToToday?, onStatusChange? })` props as before — Task 10 depends on this signature being unchanged.
 
-- [ ] **Step 1: Swap `task.dueDate` for `task.endDate`, rename the dialog prop**
+- [x] **Step 1: Swap `task.dueDate` for `task.endDate`, rename the dialog prop**
 
 ```tsx
 "use client";
@@ -1180,12 +1180,12 @@ export function TaskDayItem({
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/components/tasks/TaskDayItem.tsx`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/tasks/TaskDayItem.tsx
@@ -1203,7 +1203,7 @@ git commit -m "refactor: TaskDayItem displays endDate, uses renamed onSubmitTask
 - Consumes: `Habit`, `HabitLog` from `@/lib/habits/types` (Task 2); `Checkbox` from `@/components/ui/checkbox`.
 - Produces: `HabitChecklistItem({ habit, log, onToggle })` where `onToggle: (habitId: string, completed: boolean) => void` — Task 10 wires this directly to its `handleToggleHabitLog`.
 
-- [ ] **Step 1: Write the file**
+- [x] **Step 1: Write the file**
 
 ```tsx
 "use client";
@@ -1252,12 +1252,12 @@ export function HabitChecklistItem({ habit, log, onToggle }: HabitChecklistItemP
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/components/habits/HabitChecklistItem.tsx`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/habits/HabitChecklistItem.tsx
@@ -1275,7 +1275,7 @@ git commit -m "feat: add HabitChecklistItem for the Todo page's daily-habit bloc
 - Consumes: `createTask, deleteTask, rescheduleTaskToToday, updateTask, updateTaskStatus` from `@/app/actions/tasks` (Task 3); `createHabit, setHabitLogStatus` from `@/app/actions/habits` (Task 4); `TaskDayItem` (Task 8); `TaskFormDialog, HabitFormInput, TaskFormInput` (Task 7); `HabitChecklistItem` (Task 9); `Habit, HabitLog` from `@/lib/habits/types`.
 - Produces: `TasksOverviewSection({ tasks, habits, habitLogs, selectedDate })` — Task 11 passes `habits`/`habitLogs` into this new prop shape.
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```tsx
 "use client";
@@ -1536,12 +1536,12 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/components/tasks/TasksOverviewSection.tsx` itself (its caller, `OverviewBoard`, is fixed in Task 11).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/tasks/TasksOverviewSection.tsx
@@ -1560,7 +1560,7 @@ git commit -m "feat: split Todo page into separate task and daily-habit blocks"
 - Consumes: `getHabits, getHabitLogs` from `@/app/actions/habits` (Task 4); `TasksOverviewSection` with its new `habits`/`habitLogs` props (Task 10).
 - Produces: `OverviewBoard({ tasks, habits, habitLogs, events })`.
 
-- [ ] **Step 1: Update `src/components/dashboard/OverviewBoard.tsx`**
+- [x] **Step 1: Update `src/components/dashboard/OverviewBoard.tsx`**
 
 ```tsx
 "use client";
@@ -1604,7 +1604,7 @@ export function OverviewBoard({ tasks, habits, habitLogs, events }: OverviewBoar
 }
 ```
 
-- [ ] **Step 2: Update `src/app/(dashboard)/OverviewContent.tsx`**
+- [x] **Step 2: Update `src/app/(dashboard)/OverviewContent.tsx`**
 
 ```tsx
 import { connection } from "next/server";
@@ -1639,12 +1639,12 @@ export async function OverviewContent() {
 }
 ```
 
-- [ ] **Step 3: Run the type checker**
+- [x] **Step 3: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference either file.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/dashboard/OverviewBoard.tsx "src/app/(dashboard)/OverviewContent.tsx"
@@ -1662,7 +1662,7 @@ git commit -m "feat: fetch and thread habits/habitLogs into the Todo page"
 - Consumes: `Task` from `@/lib/tasks/types` (startDate/endDate from Task 2).
 - Produces: same `DashboardCalendarCard({ tasks, selectedDate, onSelectDate })` props as before.
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```tsx
 "use client";
@@ -1743,12 +1743,12 @@ export function DashboardCalendarCard({ tasks, selectedDate, onSelectDate }: Das
 }
 ```
 
-- [ ] **Step 2: Run the type checker**
+- [x] **Step 2: Run the type checker**
 
 Run: `npx tsc --noEmit`
 Expected: no errors reference `src/components/dashboard/DashboardCalendarCard.tsx`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/dashboard/DashboardCalendarCard.tsx
@@ -1771,7 +1771,7 @@ git commit -m "refactor: dot every day of a task's start/end window on the mini 
 
 Note: `TaskForm`/`TaskItem`/`useTasks`/`TasksDevClient` only back the `/dev/tasks` sandbox route — `TasksOverviewSection` (the real Todo page, Task 10) does not use any of them. The spec's "Loại" once/daily selector therefore isn't added here; this task only keeps the sandbox compiling against the new `Task` shape with the minimum change (two date fields instead of one, recurrence dropped).
 
-- [ ] **Step 1: Update `src/hooks/use-tasks.ts`**
+- [x] **Step 1: Update `src/hooks/use-tasks.ts`**
 
 ```ts
 "use client";
@@ -1811,7 +1811,7 @@ export function useTasks(initialTasks: Task[] = []) {
 }
 ```
 
-- [ ] **Step 2: Update `src/components/tasks/TaskForm.tsx`**
+- [x] **Step 2: Update `src/components/tasks/TaskForm.tsx`**
 
 ```tsx
 "use client";
@@ -1894,7 +1894,7 @@ export function TaskForm({ onCreate }: TaskFormProps) {
 }
 ```
 
-- [ ] **Step 3: Update `src/components/tasks/TaskItem.tsx`**
+- [x] **Step 3: Update `src/components/tasks/TaskItem.tsx`**
 
 ```tsx
 "use client";
@@ -1971,7 +1971,7 @@ export function TaskItem({ task, onToggleStatus, onDelete, referenceDate }: Task
 }
 ```
 
-- [ ] **Step 4: Update `src/app/dev/tasks/TasksDevClient.tsx`**
+- [x] **Step 4: Update `src/app/dev/tasks/TasksDevClient.tsx`**
 
 ```tsx
 "use client";
@@ -2055,12 +2055,12 @@ export function TasksDevClient() {
 }
 ```
 
-- [ ] **Step 5: Run the type checker across the whole project**
+- [x] **Step 5: Run the type checker across the whole project**
 
 Run: `npx tsc --noEmit`
 Expected: **zero errors** anywhere in the project. If anything remains, it's a file this plan missed — find it and fix it before moving on.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/hooks/use-tasks.ts src/components/tasks/TaskForm.tsx src/components/tasks/TaskItem.tsx src/app/dev/tasks/TasksDevClient.tsx
@@ -2073,12 +2073,12 @@ git commit -m "chore: update /dev/tasks sandbox for the start/end task model"
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Lint**
+- [x] **Step 1: Lint**
 
 Run: `npm run lint`
 Expected: no errors.
 
-- [ ] **Step 2: Production build**
+- [x] **Step 2: Production build**
 
 Run: `npm run build`
 Expected: builds successfully (this also re-runs the TypeScript check in a production context and will catch anything `tsc --noEmit` alone might miss, e.g. serialization of Server Action arguments).
@@ -2093,7 +2093,7 @@ Expected: the task appears today; navigating the mini calendar forward shows it 
 In the same dialog, click "+ Thêm công việc" again, switch "Loại" to "Hàng ngày", give it a title, save. In the new "Thói quen hàng ngày" block, tick its checkbox, then untick it, then tick it again.
 Expected: at every step there is still exactly one row for that habit in the list (no duplicate appears). Confirm in the Supabase table editor that `habit_logs` has exactly one row for that `(habit_id, log_date)` pair, not two.
 
-- [ ] **Step 5: Commit (if any fixes were needed)**
+- [x] **Step 5: Commit (if any fixes were needed)**
 
 Only if Steps 1–4 turned up something to fix — make the fix, then:
 
