@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { eachDayOfInterval } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Calendar, CalendarDayButton } from "@/components/ui/calendar";
 import { toDateKey } from "@/lib/date/date-key";
@@ -17,22 +18,29 @@ interface DashboardCalendarCardProps {
 export function DashboardCalendarCard({ tasks, selectedDate, onSelectDate }: DashboardCalendarCardProps) {
   const todayKey = toDateKey(new Date());
 
-  const datesWithTasks = useMemo(
-    () => new Set(tasks.filter((t) => t.dueDate).map((t) => toDateKey(t.dueDate!))),
-    [tasks]
-  );
+  // A multi-day task dots every day in its [startDate, endDate] window, not just one.
+  const datesWithTasks = useMemo(() => {
+    const keys = new Set<string>();
+    for (const task of tasks) {
+      for (const day of eachDayOfInterval({ start: task.startDate, end: task.endDate })) {
+        keys.add(toDateKey(day));
+      }
+    }
+    return keys;
+  }, [tasks]);
 
-  // Past dates still carrying unfinished tasks get a red flag instead of the
+  // Past dates still carrying an unfinished task get a red flag instead of the
   // normal dot, since those tasks have already rolled over into "Hôm nay".
-  const datesOverdue = useMemo(
-    () =>
-      new Set(
-        tasks
-          .filter((t) => t.status === "pending" && t.dueDate && toDateKey(t.dueDate) < todayKey)
-          .map((t) => toDateKey(t.dueDate!))
-      ),
-    [tasks, todayKey]
-  );
+  const datesOverdue = useMemo(() => {
+    const keys = new Set<string>();
+    for (const task of tasks) {
+      if (task.status !== "pending" || toDateKey(task.endDate) >= todayKey) continue;
+      for (const day of eachDayOfInterval({ start: task.startDate, end: task.endDate })) {
+        keys.add(toDateKey(day));
+      }
+    }
+    return keys;
+  }, [tasks, todayKey]);
 
   return (
     <Calendar
