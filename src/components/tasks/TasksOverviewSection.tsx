@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { endOfDay, startOfDay } from "date-fns";
 import { createTask, deleteTask, rescheduleTaskToToday, updateTask, updateTaskStatus } from "@/app/actions/tasks";
@@ -83,12 +83,47 @@ function isTaskOnDay(task: Task, dayKey: string): boolean {
 
 export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }: TasksOverviewSectionProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   // Local state updates immediately on every action; it reconciles with the
   // server-fetched props once router.refresh() lands, so interactions never
   // wait on the Supabase round trip to feel instant.
   const [optimisticTasks, applyOptimistic] = useOptimistic(tasks, applyOptimisticAction);
   const [optimisticHabitLogs, applyOptimisticLog] = useOptimistic(habitLogs, applyOptimisticHabitLog);
+  // Tracks which specific task/habit row is mid-mutation, so the loading
+  // state renders inline in that row's own checkbox instead of a generic
+  // banner — the mutation itself still runs immediately regardless.
+  const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
+  const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
+
+  function withTaskPending(id: string, fn: () => Promise<void>) {
+    setPendingTaskIds((prev) => new Set(prev).add(id));
+    startTransition(async () => {
+      try {
+        await fn();
+      } finally {
+        setPendingTaskIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    });
+  }
+
+  function withHabitPending(id: string, fn: () => Promise<void>) {
+    setPendingHabitIds((prev) => new Set(prev).add(id));
+    startTransition(async () => {
+      try {
+        await fn();
+      } finally {
+        setPendingHabitIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    });
+  }
 
   function handleCreate(input: TaskFormInput) {
     const optimisticTask: Task = {
@@ -128,7 +163,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
     const task = optimisticTasks.find((t) => t.id === id);
     if (!task) return;
     const nextStatus = task.status === "pending" ? "completed" : "pending";
-    startTransition(async () => {
+    withTaskPending(id, async () => {
       applyOptimistic({ type: "setStatus", id, status: nextStatus });
       await updateTaskStatus(id, nextStatus);
       router.refresh();
@@ -138,7 +173,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   // Wired to the task-edit dialog's subtask checklist: finishing the last
   // subtask (or unchecking one) flips the parent task's own status.
   function handleStatusChange(id: string, status: TaskStatus) {
-    startTransition(async () => {
+    withTaskPending(id, async () => {
       applyOptimistic({ type: "setStatus", id, status });
       await updateTaskStatus(id, status);
       router.refresh();
@@ -154,7 +189,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   }
 
   function handleRescheduleToToday(id: string) {
-    startTransition(async () => {
+    withTaskPending(id, async () => {
       applyOptimistic({ type: "reschedule", id });
       await rescheduleTaskToToday(id);
       router.refresh();
@@ -163,7 +198,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
 
   function handleToggleHabitLog(habitId: string, completed: boolean) {
     const logDate = toDateKey(selectedDate);
-    startTransition(async () => {
+    withHabitPending(habitId, async () => {
       applyOptimisticLog({ habitId, logDate, completed });
       await setHabitLogStatus(habitId, logDate, completed);
       router.refresh();
@@ -221,12 +256,11 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
                   onDelete={handleDelete}
                   onRescheduleToToday={handleRescheduleToToday}
                   onStatusChange={handleStatusChange}
+                  pending={pendingTaskIds.has(task.id)}
                 />
               ))}
             </ul>
           )}
-
-          {isPending && <p className="text-xs text-slate-500">Đang cập nhật…</p>}
         </CardContent>
       </Card>
 
@@ -245,6 +279,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
                   habit={habit}
                   log={habitLogsByHabitId.get(habit.id)}
                   onToggle={handleToggleHabitLog}
+                  pending={pendingHabitIds.has(habit.id)}
                 />
               ))}
             </ul>

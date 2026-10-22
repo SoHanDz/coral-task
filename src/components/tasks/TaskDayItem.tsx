@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { CheckCircle2, CalendarArrowUp } from "lucide-react";
+import { CheckCircle2, CalendarArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,8 @@ interface TaskDayItemProps {
   onDelete: (id: string) => void;
   onRescheduleToToday?: (id: string) => void;
   onStatusChange?: (id: string, status: TaskStatus) => void;
+  /** True while a status/reschedule mutation for this task is in flight. */
+  pending?: boolean;
 }
 
 export function TaskDayItem({
@@ -25,6 +27,7 @@ export function TaskDayItem({
   onDelete,
   onRescheduleToToday,
   onStatusChange,
+  pending = false,
 }: TaskDayItemProps) {
   const completed = task.status === "completed";
   const overdue = isOverdue(task);
@@ -47,13 +50,18 @@ export function TaskDayItem({
         onClick={() => onToggleStatus(task.id)}
         aria-label={completed ? "Đánh dấu chưa làm" : "Đánh dấu đã xong"}
         className="shrink-0"
+        disabled={pending}
       >
-        <CheckCircle2
-          className={cn(
-            "size-6 transition-colors duration-200",
-            completed ? "fill-emerald-500 text-white" : "text-slate-300 hover:text-emerald-500"
-          )}
-        />
+        {pending ? (
+          <Loader2 className="size-6 animate-spin text-slate-400" />
+        ) : (
+          <CheckCircle2
+            className={cn(
+              "size-6 transition-colors duration-200",
+              completed ? "fill-emerald-500 text-white" : "text-slate-300 hover:text-emerald-500"
+            )}
+          />
+        )}
       </button>
 
       <TaskFormDialog
@@ -95,6 +103,7 @@ export function TaskDayItem({
             variant="outline"
             className="h-7 gap-1 border-destructive/30 px-2 text-xs text-destructive transition-colors duration-200 hover:bg-destructive/10"
             onClick={() => onRescheduleToToday(task.id)}
+            disabled={pending}
           >
             <CalendarArrowUp className="size-3.5" />
             Dời sang hôm nay
