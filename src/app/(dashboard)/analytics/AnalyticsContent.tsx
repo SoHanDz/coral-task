@@ -4,16 +4,15 @@ import { getEvents } from "@/app/actions/events";
 import { EventsListSection } from "@/components/events/EventsListSection";
 import { TopBar } from "@/components/layout/TopBar";
 import { YearGrid } from "@/components/year-grid/YearGrid";
-import { isOverdue } from "@/lib/tasks/overdue";
+import { getCurrentUserEmail } from "@/lib/supabase/require-user";
 
 export async function AnalyticsContent() {
   await connection();
-  const [tasks, events] = await Promise.all([getTasks(), getEvents()]);
-  const overdueCount = tasks.filter((task) => isOverdue(task)).length;
+  const [tasks, events, email] = await Promise.all([getTasks(), getEvents(), getCurrentUserEmail()]);
 
   return (
     <div className="min-h-screen bg-slate-100/70">
-      <TopBar title="Lịch & Sự kiện" overdueCount={overdueCount} />
+      <TopBar title="Lịch & Sự kiện" email={email} />
 
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-3 lg:items-start">
         <YearGrid events={events} tasks={tasks} className="w-full lg:col-span-2" />

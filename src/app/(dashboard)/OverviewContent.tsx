@@ -3,7 +3,6 @@ import { getTasks } from "@/app/actions/tasks";
 import { getHabits, getHabitLogs } from "@/app/actions/habits";
 import { getEvents } from "@/app/actions/events";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
-import { isOverdue } from "@/lib/tasks/overdue";
 import { OverviewBoard } from "@/components/dashboard/OverviewBoard";
 import { TopBar } from "@/components/layout/TopBar";
 
@@ -16,11 +15,10 @@ export async function OverviewContent() {
     getEvents(),
     getCurrentUserEmail(),
   ]);
-  const overdueCount = tasks.filter((task) => task.status === "pending" && isOverdue(task)).length;
 
   return (
     <div className="min-h-screen bg-slate-100/70">
-      <TopBar email={email} overdueCount={overdueCount} />
+      <TopBar email={email} />
 
       <div className="mx-auto max-w-6xl p-4 sm:p-8">
         <OverviewBoard tasks={tasks} habits={habits} habitLogs={habitLogs} events={events} />

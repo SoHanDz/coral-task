@@ -1,16 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { Bell } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { signOut } from "@/app/login/actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface TopBarProps {
   /** Omit to render a plain page title instead of the personalized greeting. */
   email?: string | null;
   title?: string;
-  overdueCount?: number;
 }
 
 function getGreeting(now: Date) {
@@ -20,7 +25,7 @@ function getGreeting(now: Date) {
   return "Chào buổi tối";
 }
 
-export function TopBar({ email, title, overdueCount }: TopBarProps) {
+export function TopBar({ email, title }: TopBarProps) {
   // Starts null so the initial (and prerendered) render never reads the
   // current time — Next's static prerendering rejects `new Date()` during
   // render. The real clock is filled in after mount, client-side only.
@@ -50,36 +55,42 @@ export function TopBar({ email, title, overdueCount }: TopBarProps) {
         <div className="h-10" />
       )}
 
-      <div className="flex items-center gap-3">
-        {!title && (
-          <div className="flex min-w-0 items-center gap-3">
+      {email && (
+        <div className="flex min-w-0 items-center gap-3">
+          {!title && (
             <div className="min-w-0 text-right">
-              <p className="text-xs font-medium text-slate-500">{now ? getGreeting(now) : " "}</p>
+              <p className="text-xs font-medium text-slate-500">{now ? getGreeting(now) : " "}</p>
               <p className="truncate text-base font-semibold text-slate-800">{displayName}</p>
             </div>
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary">
-              {initial}
-            </span>
-          </div>
-        )}
-
-        {overdueCount !== undefined && (
-          <Link
-            href="/#overdue-tasks"
-            aria-label={
-              overdueCount > 0 ? `${overdueCount} việc trễ hạn cần xử lý` : "Không có việc trễ hạn"
-            }
-            className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-colors duration-200 hover:bg-slate-200"
-          >
-            <Bell className="size-5" />
-            {overdueCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-destructive text-[10px] font-semibold text-white">
-                {overdueCount > 9 ? "9+" : overdueCount}
-              </span>
-            )}
-          </Link>
-        )}
-      </div>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  aria-label="Tài khoản"
+                  className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-semibold text-primary"
+                >
+                  {initial}
+                </button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                variant="destructive"
+                render={
+                  <form action={signOut} className="w-full">
+                    <button type="submit" className="flex w-full items-center gap-1.5">
+                      <LogOut />
+                      Đăng xuất
+                    </button>
+                  </form>
+                }
+              />
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
     </header>
   );
 }
