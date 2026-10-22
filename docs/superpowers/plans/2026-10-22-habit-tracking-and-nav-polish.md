@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `public.habit_quotes(id uuid, user_id uuid, text text, created_at timestamptz)` with RLS scoped to `user_id = auth.uid()` on all four operations — Task 2's actions depend on this table and these policies existing.
 
-- [ ] **Step 1: Write the migration**
+- [x] **Step 1: Write the migration**
 
 ```sql
 begin;
@@ -70,12 +70,12 @@ create policy "Users can delete their own habit quotes"
 commit;
 ```
 
-- [ ] **Step 2: Apply the migration**
+- [x] **Step 2: Apply the migration**
 
 Run: `npx supabase db push` (or however this repo applies pending migrations — check `package.json` scripts first; the 0007 migration was applied the same way).
 Expected: `habit_quotes` exists in the Supabase project with RLS enabled.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add supabase/migrations/0008_habit_quotes.sql
@@ -94,7 +94,7 @@ git commit -m "feat: add habit_quotes table for the habit-tracking page's quote 
 - Consumes: `requireUser` from `@/lib/supabase/require-user` (same pattern as `src/app/actions/habits.ts`).
 - Produces: `HabitQuote { id: string; text: string; createdAt: Date }`; `getHabitQuotes(): Promise<HabitQuote[]>`; `createHabitQuote(text: string): Promise<HabitQuote>`; `updateHabitQuote(id: string, text: string): Promise<void>`; `deleteHabitQuote(id: string): Promise<void>` — Task 7's quote widget/manager dialog calls these by these exact names.
 
-- [ ] **Step 1: Add `HabitQuote` to `src/lib/habits/types.ts`**
+- [x] **Step 1: Add `HabitQuote` to `src/lib/habits/types.ts`**
 
 Add to the existing file (append, don't remove `Habit`/`HabitLog`):
 
@@ -106,7 +106,7 @@ export interface HabitQuote {
 }
 ```
 
-- [ ] **Step 2: Write `src/app/actions/habitQuotes.ts`**
+- [x] **Step 2: Write `src/app/actions/habitQuotes.ts`**
 
 ```ts
 "use server";
@@ -186,12 +186,12 @@ export async function deleteHabitQuote(id: string): Promise<void> {
 }
 ```
 
-- [ ] **Step 3: Type-check**
+- [x] **Step 3: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors (this file has no callers yet).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/lib/habits/types.ts src/app/actions/habitQuotes.ts
@@ -209,7 +209,7 @@ git commit -m "feat: add HabitQuote type and habit_quotes CRUD actions"
 - Consumes: `Habit`, `HabitLog` from `@/lib/habits/types`; `toDateKey` from `@/lib/date/date-key`.
 - Produces: `getDayState(habits, logs, date): "all-done" | "missed" | "no-habit"`; `getCurrentStreak(habitId, logs, today): number`; `getBestStreak(habitId, logs): number`; `getLongestBreak(habitId, logs, createdAt): number`; `getCompletedDaysCount(habitId, logs): number`; `rankByFrequency(habits, logs): { habit: Habit; count: number }[]` — Task 4 (year grid), Task 8 (frequency stats row) and Task 10 ("Dựng thói quen" page: streak callout), and Task 6 (detail dialog) all call these by these exact names.
 
-- [ ] **Step 1: Write the module**
+- [x] **Step 1: Write the module**
 
 ```ts
 import { addDays, isBefore, isSameDay, subDays } from "date-fns";
@@ -310,12 +310,12 @@ export function rankByFrequency(habits: Habit[], logs: HabitLog[]): { habit: Hab
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/lib/habits/stats.ts
@@ -334,7 +334,7 @@ git commit -m "feat: add pure habit stats functions (day state, streaks, frequen
 - Consumes: `getMonthsData`, `getYearProgress` from `@/lib/date/year-progress`; `toDateKey` from `@/lib/date/date-key`; `getDayState` from `@/lib/habits/stats` (Task 3); `Habit`, `HabitLog` from `@/lib/habits/types`.
 - Produces: `HabitDayDot({ dayState, today, title, completedCount, totalCount }: HabitDayDotProps)`; `HabitYearGrid({ habits, habitLogs, referenceDate?, className? }: HabitYearGridProps)` — Task 10's `/habits` page renders `HabitYearGrid` directly.
 
-- [ ] **Step 1: Write `HabitDayDot`**
+- [x] **Step 1: Write `HabitDayDot`**
 
 ```tsx
 import { cn } from "@/lib/utils";
@@ -388,7 +388,7 @@ export function HabitDayDot({ dayState, today = false, title, completedCount, to
 }
 ```
 
-- [ ] **Step 2: Write `HabitYearGrid`**
+- [x] **Step 2: Write `HabitYearGrid`**
 
 ```tsx
 "use client";
@@ -476,12 +476,12 @@ function HabitYearGridImpl({ habits, habitLogs, referenceDate, className }: Habi
 export const HabitYearGrid = memo(HabitYearGridImpl);
 ```
 
-- [ ] **Step 3: Type-check**
+- [x] **Step 3: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors (not wired into any page yet).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/habits/HabitDayDot.tsx src/components/habits/HabitYearGrid.tsx
@@ -499,7 +499,7 @@ git commit -m "feat: add HabitDayDot and HabitYearGrid for the habit-tracking pa
 - Consumes: `Dialog`, `DialogContent`, `DialogHeader`, `DialogTitle` from `@/components/ui/dialog`; `Button` from `@/components/ui/button`; `Input` from `@/components/ui/input`.
 - Produces: `DeleteHabitDialog({ open, onOpenChange, habitTitle, onConfirm }: DeleteHabitDialogProps)` — Task 6's `HabitDetailDialog` renders this when its own "Xóa" button is pressed.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 ```tsx
 "use client";
@@ -653,12 +653,12 @@ export function DeleteHabitDialog({ open, onOpenChange, habitTitle, onConfirm }:
 
 Note on the spec's "Xóa (left, default/white) / Đừng xóa (right, blue/primary)" button order: implemented here as the hold-button on the left and `variant="default"` (primary) "Đừng xóa" on the right, matching the spec's left/right + color pairing exactly.
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/habits/DeleteHabitDialog.tsx
@@ -676,7 +676,7 @@ git commit -m "feat: add GitHub-style press-and-hold delete flow for habits"
 - Consumes: `Habit`, `HabitLog` from `@/lib/habits/types`; `getCompletedDaysCount`, `getBestStreak`, `getLongestBreak` from `@/lib/habits/stats` (Task 3); `DeleteHabitDialog` (Task 5); `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` from `@/components/ui/dialog`; `Input`, `Textarea`, `Label`, `Button` from `@/components/ui`.
 - Produces: `HabitDetailDialog({ habit, habitLogs, open, onOpenChange, onUpdate, onDelete }: HabitDetailDialogProps)` where `onUpdate(id: string, input: { title: string; description: string | null; dueTime: string }): void` and `onDelete(id: string): void` — Task 10's `/habits` page renders this per-habit row click and wires these to `updateHabit`/`deleteHabit`.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 ```tsx
 "use client";
@@ -828,12 +828,12 @@ export function HabitDetailDialog({ habit, habitLogs, open, onOpenChange, onUpda
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/habits/HabitDetailDialog.tsx
@@ -852,7 +852,7 @@ git commit -m "feat: add habit detail dialog with view/edit toggle and delete en
 - Consumes: `HabitQuote` from `@/lib/habits/types`; `createHabitQuote`, `updateHabitQuote`, `deleteHabitQuote` from `@/app/actions/habitQuotes` (Task 2); `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` from `@/components/ui/dialog`; `Input`, `Button` from `@/components/ui`.
 - Produces: `QuoteWidget({ quotes }: { quotes: HabitQuote[] })` (picks one at random client-side on mount so it varies per load without a server round trip, and renders the "Quản lý quote" trigger) — Task 10's `/habits` page renders this with the server-fetched `quotes` list.
 
-- [ ] **Step 1: Write `QuoteManagerDialog`**
+- [x] **Step 1: Write `QuoteManagerDialog`**
 
 ```tsx
 "use client";
@@ -972,7 +972,7 @@ export function QuoteManagerDialog({ quotes, trigger }: QuoteManagerDialogProps)
 }
 ```
 
-- [ ] **Step 2: Write `QuoteWidget`**
+- [x] **Step 2: Write `QuoteWidget`**
 
 ```tsx
 "use client";
@@ -1016,12 +1016,12 @@ export function QuoteWidget({ quotes }: QuoteWidgetProps) {
 }
 ```
 
-- [ ] **Step 3: Type-check**
+- [x] **Step 3: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/habits/QuoteWidget.tsx src/components/habits/QuoteManagerDialog.tsx
@@ -1039,7 +1039,7 @@ git commit -m "feat: add habit quote widget and quote list manager dialog"
 - Consumes: `rankByFrequency` from `@/lib/habits/stats` (Task 3); `Habit`, `HabitLog` from `@/lib/habits/types`; `Dialog`/`DialogContent`/`DialogHeader`/`DialogTitle` from `@/components/ui/dialog`.
 - Produces: `HabitFrequencyRow({ habits, habitLogs }: { habits: Habit[]; habitLogs: HabitLog[] })` — Task 10's `/habits` page renders this directly; `rankByFrequency` (Task 3) is also re-imported by Task 10 itself to compute the streak callout's top habit.
 
-- [ ] **Step 1: Write the component**
+- [x] **Step 1: Write the component**
 
 ```tsx
 "use client";
@@ -1107,12 +1107,12 @@ export function HabitFrequencyRow({ habits, habitLogs }: HabitFrequencyRowProps)
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/habits/HabitFrequencyRow.tsx
@@ -1130,7 +1130,7 @@ git commit -m "feat: add habit frequency stats row with Khác modal"
 - Consumes: nothing new.
 - Produces: `HabitChecklistItem` gains an optional `onRowClick?: (habit: Habit) => void` prop — clicking the row (not the checkbox) calls it; existing callers that omit it (the Todo page's `TasksOverviewSection`) keep today's checkbox-only behavior unchanged. Task 10's `/habits` page passes `onRowClick` to open `HabitDetailDialog`.
 
-- [ ] **Step 1: Add the optional row-click prop**
+- [x] **Step 1: Add the optional row-click prop**
 
 Replace the whole file:
 
@@ -1194,12 +1194,12 @@ export function HabitChecklistItem({ habit, log, onToggle, pending = false, onRo
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: no new errors — `TasksOverviewSection`'s existing usage (no `onRowClick` passed) still compiles since the prop is optional.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/habits/HabitChecklistItem.tsx
@@ -1220,7 +1220,7 @@ git commit -m "feat: let HabitChecklistItem open a row-click detail callback"
 - Consumes: `getHabits`, `getHabitLogs`, `setHabitLogStatus`, `updateHabit`, `deleteHabit` from `@/app/actions/habits`; `getHabitQuotes` from `@/app/actions/habitQuotes` (Task 2); `getCurrentStreak`, `rankByFrequency` from `@/lib/habits/stats` (Task 3); `HabitYearGrid` (Task 4); `HabitFrequencyRow` (Task 8); `QuoteWidget` (Task 7); `HabitChecklistItem` (Task 9); `HabitDetailDialog` (Task 6); `TopBar` from `@/components/layout/TopBar`; `toDateKey` from `@/lib/date/date-key`.
 - Produces: the `/habits` route, rendering the full page described in the spec.
 
-- [ ] **Step 1: Write the client board — `HabitsPageContent`**
+- [x] **Step 1: Write the client board — `HabitsPageContent`**
 
 ```tsx
 "use client";
@@ -1359,7 +1359,7 @@ export function HabitsPageContent({ habits, habitLogs, quotes }: HabitsPageConte
 }
 ```
 
-- [ ] **Step 2: Write the server data-fetching wrapper — `HabitsContent`**
+- [x] **Step 2: Write the server data-fetching wrapper — `HabitsContent`**
 
 ```tsx
 import { connection } from "next/server";
@@ -1381,7 +1381,7 @@ export async function HabitsContent() {
 }
 ```
 
-- [ ] **Step 3: Write `page.tsx`**
+- [x] **Step 3: Write `page.tsx`**
 
 ```tsx
 import { Suspense } from "react";
@@ -1396,7 +1396,7 @@ export default function HabitsPage() {
 }
 ```
 
-- [ ] **Step 4: Write `loading.tsx`**
+- [x] **Step 4: Write `loading.tsx`**
 
 ```tsx
 export default function HabitsLoading() {
@@ -1404,12 +1404,12 @@ export default function HabitsLoading() {
 }
 ```
 
-- [ ] **Step 5: Type-check**
+- [x] **Step 5: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: zero errors across the whole project.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/habits/HabitsPageContent.tsx src/app/(dashboard)/habits/HabitsContent.tsx src/app/(dashboard)/habits/page.tsx src/app/(dashboard)/habits/loading.tsx
@@ -1426,7 +1426,7 @@ git commit -m "feat: add the /habits page wiring year grid, stats, quote widget,
 **Interfaces:**
 - Produces: `NAV_GROUPS` — a tree with a `"Công việc"` parent (`children: [{ href: "/", label: "Todo List" }, { href: "/habits", label: "Dựng thói quen" }]`) plus flat `"Lịch & Sự kiện"` and `"Tài nguyên"` entries. Also keeps exporting a flat `NAV_ITEMS` (all leaf entries, in display order) so `MobileNav.tsx` (Task 13) doesn't need its own flattening logic. Task 12 (`Sidebar.tsx`) consumes `NAV_GROUPS`; Task 13 (`MobileNav.tsx`) consumes `NAV_ITEMS`.
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```ts
 import { CalendarDays, CheckSquare2, Flame, LayoutDashboard, Link2 } from "lucide-react";
@@ -1465,12 +1465,12 @@ function isGroup(entry: NavGroup | NavLeaf): entry is NavGroup {
 export const NAV_ITEMS: NavLeaf[] = NAV_GROUPS.flatMap((entry) => (isGroup(entry) ? entry.children : [entry]));
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: errors in `Sidebar.tsx` and `MobileNav.tsx` (`NAV_ITEMS` import shape changed / `NAV_GROUPS` doesn't exist yet there) — expected, fixed in Tasks 12–13.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/layout/nav-items.ts
@@ -1487,7 +1487,7 @@ git commit -m "refactor: restructure nav items into a Công việc group plus fl
 **Interfaces:**
 - Consumes: `NAV_GROUPS` from `@/components/layout/nav-items` (Task 11).
 
-- [ ] **Step 1: Replace the file**
+- [x] **Step 1: Replace the file**
 
 ```tsx
 "use client";
@@ -1607,12 +1607,12 @@ export function Sidebar({ profileSlot }: SidebarProps) {
 }
 ```
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: `MobileNav.tsx` still errors (Task 13 fixes it); no new errors from this file.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/components/layout/Sidebar.tsx
@@ -1629,16 +1629,16 @@ git commit -m "feat: make sidebar sticky and group Todo List + habit page under 
 **Interfaces:**
 - Consumes: `NAV_ITEMS` from `@/components/layout/nav-items` (Task 11, already flat — no change needed to the consuming logic, only the import still resolves the same shape).
 
-- [ ] **Step 1: Verify the file compiles unchanged**
+- [x] **Step 1: Verify the file compiles unchanged**
 
 `MobileNav.tsx` already imports `NAV_ITEMS` and maps over `{ href, shortLabel, icon }` — Task 11 kept `NAV_ITEMS` exported with that exact shape (now sourced from flattening `NAV_GROUPS`), so no edit is needed here. Confirm by reading the file: it should still read exactly as it did before Task 11.
 
-- [ ] **Step 2: Type-check**
+- [x] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: zero errors across the whole project — this closes out the nav-items refactor from Tasks 11–12.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 Nothing to commit for this task (no file changed) — skip the commit step.
 
@@ -1655,7 +1655,7 @@ Nothing to commit for this task (no file changed) — skip the commit step.
 - Consumes: `DropdownMenu`, `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem` from `@/components/ui/dropdown-menu`; `signOut` from `@/app/login/actions`.
 - Produces: `TopBarProps` drops `overdueCount` entirely; the avatar renders whenever `email` is truthy (regardless of `title`) and is now a `DropdownMenu` trigger with one "Đăng xuất" item.
 
-- [ ] **Step 1: Rewrite `TopBar.tsx`**
+- [x] **Step 1: Rewrite `TopBar.tsx`**
 
 ```tsx
 "use client";
@@ -1756,7 +1756,7 @@ export function TopBar({ email, title }: TopBarProps) {
 }
 ```
 
-- [ ] **Step 2: Remove `overdueCount` from `OverviewContent.tsx`**
+- [x] **Step 2: Remove `overdueCount` from `OverviewContent.tsx`**
 
 In `src/app/(dashboard)/OverviewContent.tsx`, remove the `overdueCount` computation and prop:
 
@@ -1793,7 +1793,7 @@ export async function OverviewContent() {
 
 Note: `isOverdue` is no longer imported/used here — the overdue-tasks UI itself (e.g. `#overdue-tasks` highlighting inside `OverviewBoard`) is untouched; only the bell affordance in `TopBar` is removed.
 
-- [ ] **Step 3: Remove `overdueCount` from `AnalyticsContent.tsx`**
+- [x] **Step 3: Remove `overdueCount` from `AnalyticsContent.tsx`**
 
 ```tsx
 import { connection } from "next/server";
@@ -1826,7 +1826,7 @@ export async function AnalyticsContent() {
 
 Note: `email` is now threaded into this page's `TopBar` too (via `getCurrentUserEmail`), since the avatar must be reachable from every page per the spec — `AnalyticsContent` previously never fetched the email at all.
 
-- [ ] **Step 4: Update `HabitsContent.tsx` (Task 10) the same way, for consistency**
+- [x] **Step 4: Update `HabitsContent.tsx` (Task 10) the same way, for consistency**
 
 In `src/app/(dashboard)/habits/HabitsContent.tsx`, thread `email` through too so the avatar/logout is reachable from the habits page as well:
 
@@ -1856,7 +1856,7 @@ export async function HabitsContent() {
 }
 ```
 
-- [ ] **Step 5: Thread `email` through `ResourcesContent.tsx` too, for the same reason**
+- [x] **Step 5: Thread `email` through `ResourcesContent.tsx` too, for the same reason**
 
 ```tsx
 import { connection } from "next/server";
@@ -1880,12 +1880,12 @@ export async function ResourcesContent() {
 }
 ```
 
-- [ ] **Step 6: Type-check**
+- [x] **Step 6: Type-check**
 
 Run: `npx tsc --noEmit`
 Expected: zero errors across the whole project.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/layout/TopBar.tsx src/app/\(dashboard\)/OverviewContent.tsx src/app/\(dashboard\)/analytics/AnalyticsContent.tsx src/app/\(dashboard\)/habits/HabitsContent.tsx src/app/\(dashboard\)/resources/ResourcesContent.tsx
@@ -1898,12 +1898,12 @@ git commit -m "feat: drop the overdue bell and add an avatar logout dropdown rea
 
 **Files:** none (verification only)
 
-- [ ] **Step 1: Lint**
+- [x] **Step 1: Lint**
 
 Run: `npm run lint`
 Expected: no errors.
 
-- [ ] **Step 2: Production build**
+- [x] **Step 2: Production build**
 
 Run: `npm run build`
 Expected: builds successfully.
