@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import type { Recurrence, Task } from "@/lib/tasks/types";
+import type { Task } from "@/lib/tasks/types";
 
 export function useTasks(initialTasks: Task[] = []) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
 
-  function addTask(input: { title: string; dueDate: Date | null; recurrence: Recurrence }) {
+  function addTask(input: { title: string; startDate: Date; endDate: Date }) {
     const task: Task = {
       id: crypto.randomUUID(),
       title: input.title,
       description: null,
-      dueDate: input.dueDate,
-      recurrence: input.recurrence,
+      startDate: input.startDate,
+      endDate: input.endDate,
       status: "pending",
       createdAt: new Date(),
       completedAt: null,

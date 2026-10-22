@@ -1,6 +1,6 @@
 "use client";
 
-import { addDays, subDays } from "date-fns";
+import { addDays, endOfDay, subDays } from "date-fns";
 import { useTasks } from "@/hooks/use-tasks";
 import { TaskForm } from "@/components/tasks/TaskForm";
 import { TaskList } from "@/components/tasks/TaskList";
@@ -13,8 +13,8 @@ const seedTasks: Task[] = [
     id: "seed-overdue",
     title: "[Expect RED] Quá hạn 3 ngày, chưa làm",
     description: null,
-    dueDate: subDays(today, 3),
-    recurrence: "none",
+    startDate: subDays(today, 3),
+    endDate: endOfDay(subDays(today, 3)),
     status: "pending",
     createdAt: today,
     completedAt: null,
@@ -24,8 +24,8 @@ const seedTasks: Task[] = [
     id: "seed-overdue-completed",
     title: "[Expect normal] Quá hạn nhưng đã xong",
     description: null,
-    dueDate: subDays(today, 3),
-    recurrence: "none",
+    startDate: subDays(today, 3),
+    endDate: endOfDay(subDays(today, 3)),
     status: "completed",
     createdAt: today,
     completedAt: today,
@@ -35,8 +35,8 @@ const seedTasks: Task[] = [
     id: "seed-today",
     title: "[Expect normal] Hạn đúng hôm nay",
     description: null,
-    dueDate: today,
-    recurrence: "daily",
+    startDate: today,
+    endDate: endOfDay(today),
     status: "pending",
     createdAt: today,
     completedAt: null,
@@ -46,19 +46,19 @@ const seedTasks: Task[] = [
     id: "seed-future",
     title: "[Expect normal] Hạn còn 5 ngày nữa",
     description: null,
-    dueDate: addDays(today, 5),
-    recurrence: "weekly",
+    startDate: addDays(today, 5),
+    endDate: endOfDay(addDays(today, 5)),
     status: "pending",
     createdAt: today,
     completedAt: null,
     subtasks: [],
   },
   {
-    id: "seed-no-due",
-    title: "[Expect normal] Không có hạn chót",
+    id: "seed-range",
+    title: "[Expect normal] Kéo dài 3 ngày",
     description: null,
-    dueDate: null,
-    recurrence: "monthly",
+    startDate: today,
+    endDate: endOfDay(addDays(today, 2)),
     status: "pending",
     createdAt: today,
     completedAt: null,

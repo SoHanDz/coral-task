@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isOverdue } from "@/lib/tasks/overdue";
-import { RECURRENCE_LABELS, STATUS_LABELS, type Task } from "@/lib/tasks/types";
+import { STATUS_LABELS, type Task } from "@/lib/tasks/types";
 
 interface TaskItemProps {
   task: Task;
@@ -39,8 +39,8 @@ export function TaskItem({ task, onToggleStatus, onDelete, referenceDate }: Task
           )}
         </div>
         <p className="text-sm text-slate-500">
-          {task.dueDate ? format(task.dueDate, "dd/MM/yyyy") : "Không có hạn"} ·{" "}
-          {RECURRENCE_LABELS[task.recurrence]} · {STATUS_LABELS[task.status]}
+          {format(task.startDate, "dd/MM/yyyy")} → {format(task.endDate, "dd/MM/yyyy")} ·{" "}
+          {STATUS_LABELS[task.status]}
         </p>
       </div>
 
