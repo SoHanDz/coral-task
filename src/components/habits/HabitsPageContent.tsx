@@ -2,9 +2,11 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
+import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
+import { Button } from "@/components/ui/button";
 import { HabitChecklistItem } from "@/components/habits/HabitChecklistItem";
 import { HabitDetailDialog } from "@/components/habits/HabitDetailDialog";
+import { HabitFormDialog, type HabitFormInput } from "@/components/habits/HabitFormDialog";
 import { HabitFrequencyRow } from "@/components/habits/HabitFrequencyRow";
 import { HabitYearGrid } from "@/components/habits/HabitYearGrid";
 import { QuoteWidget } from "@/components/habits/QuoteWidget";
@@ -62,6 +64,13 @@ export function HabitsPageContent({ habits, habitLogs, quotes }: HabitsPageConte
     });
   }
 
+  function handleCreate(input: HabitFormInput) {
+    startTransition(async () => {
+      await createHabit(input);
+      router.refresh();
+    });
+  }
+
   function handleUpdate(id: string, input: { title: string; description: string | null; dueTime: string }) {
     startTransition(async () => {
       await updateHabit(id, input);
@@ -96,8 +105,9 @@ export function HabitsPageContent({ habits, habitLogs, quotes }: HabitsPageConte
       <QuoteWidget quotes={quotes} />
 
       <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-        <CardHeader className="px-8 pt-8">
+        <CardHeader className="flex flex-row items-center justify-between px-8 pt-8">
           <CardTitle className="text-lg font-semibold text-slate-700">Hôm nay</CardTitle>
+          <HabitFormDialog trigger={<Button type="button">+ Thêm thói quen</Button>} onSubmit={handleCreate} />
         </CardHeader>
         <CardContent className="flex flex-col gap-6 px-8 pb-8">
           {habits.length === 0 ? (

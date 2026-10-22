@@ -66,12 +66,12 @@ export function getBestStreak(habitId: string, logs: HabitLog[]): number {
   return best;
 }
 
-/** Longest consecutive not-completed run between createdAt and today. */
+/** Longest consecutive not-completed run between the day after createdAt and today. */
 export function getLongestBreak(habitId: string, logs: HabitLog[], createdAt: Date, today: Date = new Date()): number {
   const byDate = logsByDate(logs, habitId);
   let longest = 0;
   let current = 0;
-  let cursor = parseISO(toDateKey(createdAt));
+  let cursor = addDays(parseISO(toDateKey(createdAt)), 1);
 
   while (toDateKey(cursor) <= toDateKey(today)) {
     const completed = byDate.get(toDateKey(cursor)) === true;

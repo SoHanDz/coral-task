@@ -4,11 +4,12 @@ import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { endOfDay, startOfDay } from "date-fns";
 import { createTask, deleteTask, rescheduleTaskToToday, updateTask, updateTaskStatus } from "@/app/actions/tasks";
-import { createHabit, setHabitLogStatus } from "@/app/actions/habits";
+import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
 import { Button } from "@/components/ui/button";
 import { TaskDayItem } from "@/components/tasks/TaskDayItem";
 import { TaskFormDialog, type HabitFormInput, type TaskFormInput } from "@/components/tasks/TaskFormDialog";
 import { HabitChecklistItem } from "@/components/habits/HabitChecklistItem";
+import { HabitDetailDialog } from "@/components/habits/HabitDetailDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toDateKey } from "@/lib/date/date-key";
 import type { Habit, HabitLog } from "@/lib/habits/types";
@@ -94,6 +95,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   // banner — the mutation itself still runs immediately regardless.
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
+  const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
 
   function withTaskPending(id: string, fn: () => Promise<void>) {
     setPendingTaskIds((prev) => new Set(prev).add(id));
@@ -205,6 +207,20 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
     });
   }
 
+  function handleUpdateHabit(id: string, input: { title: string; description: string | null; dueTime: string }) {
+    startTransition(async () => {
+      await updateHabit(id, input);
+      router.refresh();
+    });
+  }
+
+  function handleDeleteHabit(id: string) {
+    startTransition(async () => {
+      await deleteHabit(id);
+      router.refresh();
+    });
+  }
+
   const todayKey = toDateKey(new Date());
   const selectedKey = toDateKey(selectedDate);
   const isTodaySelected = selectedKey === todayKey;
@@ -230,6 +246,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   const habitLogsByHabitId = new Map(
     optimisticHabitLogs.filter((log) => log.logDate === selectedKey).map((log) => [log.habitId, log])
   );
+  const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -280,12 +297,24 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
                   log={habitLogsByHabitId.get(habit.id)}
                   onToggle={handleToggleHabitLog}
                   pending={pendingHabitIds.has(habit.id)}
+                  onRowClick={(h) => setSelectedHabitId(h.id)}
                 />
               ))}
             </ul>
           )}
         </CardContent>
       </Card>
+
+      <HabitDetailDialog
+        habit={selectedHabit}
+        habitLogs={optimisticHabitLogs}
+        open={selectedHabitId !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedHabitId(null);
+        }}
+        onUpdate={handleUpdateHabit}
+        onDelete={handleDeleteHabit}
+      />
     </div>
   );
 }

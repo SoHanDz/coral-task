@@ -11,14 +11,14 @@ interface HabitChecklistItemProps {
   onToggle: (habitId: string, completed: boolean) => void;
   /** True while a toggle mutation for this habit is in flight. */
   pending?: boolean;
-  /** Clicking the row (not the checkbox) opens the habit's detail view. Omit to keep the row non-clickable, as on the Todo page. */
+  /** Clicking the row (not the checkbox) opens the habit's detail view. Omit to keep the row non-clickable. */
   onRowClick?: (habit: Habit) => void;
 }
 
 /**
  * One daily-habit row: a checkbox for the currently selected day plus its
- * due time. On the Todo page this is checkbox-only (no `onRowClick`); on
- * the habit-tracking page the row itself opens the detail/edit dialog.
+ * due time. When `onRowClick` is passed, the row itself opens the
+ * detail/edit dialog — used on both the Todo page and the habit-tracking page.
  */
 export function HabitChecklistItem({ habit, log, onToggle, pending = false, onRowClick }: HabitChecklistItemProps) {
   const completed = log?.completed ?? false;
