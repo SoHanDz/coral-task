@@ -1,24 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addDays, addMonths, addWeeks, endOfDay, parseISO, startOfDay } from "date-fns";
+import { endOfDay, parseISO, startOfDay } from "date-fns";
 import { requireUser } from "@/lib/supabase/require-user";
-import type { Recurrence, Subtask, Task, TaskStatus } from "@/lib/tasks/types";
+import type { Subtask, Task, TaskStatus } from "@/lib/tasks/types";
 
 interface TaskRow {
   id: string;
   title: string;
   description: string | null;
   status: TaskStatus;
-  due_date: string | null;
-  recurrence: Recurrence;
+  start_date: string;
+  end_date: string;
   created_at: string;
   completed_at: string | null;
   subtasks: Subtask[];
 }
 
 const TASK_COLUMNS =
-  "id, title, description, status, due_date, recurrence, created_at, completed_at, subtasks";
+  "id, title, description, status, start_date, end_date, created_at, completed_at, subtasks";
 
 function mapTask(row: TaskRow): Task {
   return {
@@ -26,28 +26,15 @@ function mapTask(row: TaskRow): Task {
     title: row.title,
     description: row.description,
     status: row.status,
-    recurrence: row.recurrence,
     // parseISO (not `new Date(string)`) so a date-only value is read as
     // local midnight instead of UTC midnight, which is what shifts a day
     // back once formatted in GMT+7.
-    dueDate: row.due_date ? parseISO(row.due_date) : null,
+    startDate: parseISO(row.start_date),
+    endDate: parseISO(row.end_date),
     createdAt: parseISO(row.created_at),
     completedAt: row.completed_at ? parseISO(row.completed_at) : null,
     subtasks: row.subtasks ?? [],
   };
-}
-
-function nextDueDate(current: Date, recurrence: Recurrence): Date | null {
-  switch (recurrence) {
-    case "daily":
-      return addDays(current, 1);
-    case "weekly":
-      return addWeeks(current, 1);
-    case "monthly":
-      return addMonths(current, 1);
-    case "none":
-      return null;
-  }
 }
 
 function revalidateDashboard() {
@@ -61,20 +48,21 @@ export async function getTasks(): Promise<Task[]> {
     .from("tasks")
     .select(TASK_COLUMNS)
     .eq("user_id", userId)
-    .order("due_date", { ascending: true, nullsFirst: false });
+    .order("start_date", { ascending: true });
 
   if (error) throw new Error(error.message);
   return (data as TaskRow[]).map(mapTask);
 }
 
+/** Tasks whose [start_date, end_date] window overlaps the given day. */
 export async function getTasksForDate(date: Date): Promise<Task[]> {
   const { supabase, userId } = await requireUser();
   const { data, error } = await supabase
     .from("tasks")
     .select(TASK_COLUMNS)
     .eq("user_id", userId)
-    .gte("due_date", startOfDay(date).toISOString())
-    .lte("due_date", endOfDay(date).toISOString());
+    .lte("start_date", endOfDay(date).toISOString())
+    .gte("end_date", startOfDay(date).toISOString());
 
   if (error) throw new Error(error.message);
   return (data as TaskRow[]).map(mapTask);
@@ -87,7 +75,7 @@ export async function getOverdueTasks(): Promise<Task[]> {
     .select(TASK_COLUMNS)
     .eq("user_id", userId)
     .eq("status", "pending")
-    .lt("due_date", startOfDay(new Date()).toISOString());
+    .lt("end_date", startOfDay(new Date()).toISOString());
 
   if (error) throw new Error(error.message);
   return (data as TaskRow[]).map(mapTask);
@@ -96,8 +84,8 @@ export async function getOverdueTasks(): Promise<Task[]> {
 export async function createTask(input: {
   title: string;
   description: string | null;
-  dueDate: Date | null;
-  recurrence: Recurrence;
+  startDate: Date;
+  endDate: Date;
   subtasks: Subtask[];
 }): Promise<Task> {
   const { supabase, userId } = await requireUser();
@@ -107,8 +95,8 @@ export async function createTask(input: {
       user_id: userId,
       title: input.title,
       description: input.description,
-      due_date: input.dueDate ? input.dueDate.toISOString() : null,
-      recurrence: input.recurrence,
+      start_date: input.startDate.toISOString(),
+      end_date: input.endDate.toISOString(),
       status: "pending",
       subtasks: input.subtasks,
     })
@@ -125,8 +113,8 @@ export async function updateTask(
   input: {
     title: string;
     description: string | null;
-    dueDate: Date | null;
-    recurrence: Recurrence;
+    startDate: Date;
+    endDate: Date;
     subtasks: Subtask[];
   }
 ): Promise<void> {
@@ -136,8 +124,8 @@ export async function updateTask(
     .update({
       title: input.title,
       description: input.description,
-      due_date: input.dueDate ? input.dueDate.toISOString() : null,
-      recurrence: input.recurrence,
+      start_date: input.startDate.toISOString(),
+      end_date: input.endDate.toISOString(),
       subtasks: input.subtasks,
     })
     .eq("id", id)
@@ -148,50 +136,19 @@ export async function updateTask(
 }
 
 /**
- * Toggles status. When a recurring task transitions pending -> completed,
- * the next instance is created automatically from its own due date (not
- * "today"), so the schedule never drifts even if the user completes it late.
+ * Tasks are one-time only now — toggling status never creates another row,
+ * so there is nothing left to duplicate (the old bug cloned a "next day"
+ * row here on every pending->completed transition of a recurring task).
  */
 export async function updateTaskStatus(id: string, status: TaskStatus): Promise<void> {
   const { supabase, userId } = await requireUser();
-
-  const { data: currentRow, error: fetchError } = await supabase
-    .from("tasks")
-    .select(TASK_COLUMNS)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .single();
-
-  if (fetchError) throw new Error(fetchError.message);
-  const task = mapTask(currentRow as TaskRow);
-
-  const { error: updateError } = await supabase
+  const { error } = await supabase
     .from("tasks")
     .update({ status, completed_at: status === "completed" ? new Date().toISOString() : null })
     .eq("id", id)
     .eq("user_id", userId);
 
-  if (updateError) throw new Error(updateError.message);
-
-  const justCompleted = task.status === "pending" && status === "completed";
-  const next =
-    justCompleted && task.dueDate && task.recurrence !== "none"
-      ? nextDueDate(task.dueDate, task.recurrence)
-      : null;
-
-  if (next) {
-    const { error: insertError } = await supabase.from("tasks").insert({
-      user_id: userId,
-      title: task.title,
-      description: task.description,
-      due_date: next.toISOString(),
-      recurrence: task.recurrence,
-      status: "pending",
-      subtasks: task.subtasks.map((subtask) => ({ ...subtask, completed: false })),
-    });
-    if (insertError) throw new Error(insertError.message);
-  }
-
+  if (error) throw new Error(error.message);
   revalidateDashboard();
 }
 
@@ -199,7 +156,10 @@ export async function rescheduleTaskToToday(id: string): Promise<void> {
   const { supabase, userId } = await requireUser();
   const { error } = await supabase
     .from("tasks")
-    .update({ due_date: new Date().toISOString() })
+    .update({
+      start_date: startOfDay(new Date()).toISOString(),
+      end_date: endOfDay(new Date()).toISOString(),
+    })
     .eq("id", id)
     .eq("user_id", userId);
 
