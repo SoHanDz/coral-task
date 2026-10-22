@@ -11,32 +11,38 @@ interface HabitChecklistItemProps {
   onToggle: (habitId: string, completed: boolean) => void;
   /** True while a toggle mutation for this habit is in flight. */
   pending?: boolean;
+  /** Clicking the row (not the checkbox) opens the habit's detail view. Omit to keep the row non-clickable, as on the Todo page. */
+  onRowClick?: (habit: Habit) => void;
 }
 
 /**
- * One daily-habit row on the Todo page: a checkbox for the currently
- * selected day plus its due time. No click-to-edit/delete here — that
- * belongs to the dedicated habit-tracking page (separate plan).
+ * One daily-habit row: a checkbox for the currently selected day plus its
+ * due time. On the Todo page this is checkbox-only (no `onRowClick`); on
+ * the habit-tracking page the row itself opens the detail/edit dialog.
  */
-export function HabitChecklistItem({ habit, log, onToggle, pending = false }: HabitChecklistItemProps) {
+export function HabitChecklistItem({ habit, log, onToggle, pending = false, onRowClick }: HabitChecklistItemProps) {
   const completed = log?.completed ?? false;
 
   return (
     <li
+      onClick={onRowClick ? () => onRowClick(habit) : undefined}
       className={cn(
         "flex items-center gap-3 rounded-lg border p-3 transition-colors duration-200",
-        completed ? "border-slate-200/60 bg-slate-50" : "border-slate-200/80 bg-white hover:bg-slate-50"
+        completed ? "border-slate-200/60 bg-slate-50" : "border-slate-200/80 bg-white hover:bg-slate-50",
+        onRowClick && "cursor-pointer"
       )}
     >
-      {pending ? (
-        <Loader2 className="size-4 shrink-0 animate-spin text-slate-400" />
-      ) : (
-        <Checkbox
-          checked={completed}
-          onCheckedChange={(checked) => onToggle(habit.id, checked === true)}
-          aria-label={completed ? "Đánh dấu chưa làm" : "Đánh dấu đã xong"}
-        />
-      )}
+      <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+        {pending ? (
+          <Loader2 className="size-4 animate-spin text-slate-400" />
+        ) : (
+          <Checkbox
+            checked={completed}
+            onCheckedChange={(checked) => onToggle(habit.id, checked === true)}
+            aria-label={completed ? "Đánh dấu chưa làm" : "Đánh dấu đã xong"}
+          />
+        )}
+      </div>
       <span
         className={cn(
           "min-w-0 flex-1 truncate text-sm font-medium",
