@@ -12,3 +12,9 @@ export interface HabitLog {
   completed: boolean;
   completedAt: Date | null;
 }
+
+export interface HabitQuote {
+  id: string;
+  text: string;
+  createdAt: Date;
+}
