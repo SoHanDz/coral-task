@@ -15,6 +15,7 @@ export function QuoteWidget({ quotes }: QuoteWidgetProps) {
 
   useEffect(() => {
     if (quotes.length === 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: picks the quote client-side on mount so prerendering doesn't bake in one fixed quote
       setQuote(null);
       return;
     }
