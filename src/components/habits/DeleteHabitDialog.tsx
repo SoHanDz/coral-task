@@ -4,7 +4,6 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 const HOLD_DURATION_MS = 3000;
 
@@ -20,7 +19,6 @@ export function DeleteHabitDialog({ open, onOpenChange, habitTitle, onConfirm }:
   const [revealed, setRevealed] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const frameRef = useRef<number | null>(null);
-  const directionRef = useRef<1 | -1>(1);
 
   function stopAnimation() {
     if (frameRef.current !== null) {
@@ -30,8 +28,6 @@ export function DeleteHabitDialog({ open, onOpenChange, habitTitle, onConfirm }:
   }
 
   function animate(startPercent: number, startTime: number, direction: 1 | -1) {
-    directionRef.current = direction;
-
     function step(now: number) {
       const elapsed = now - startTime;
       const deltaPercent = (elapsed / HOLD_DURATION_MS) * 100 * direction;

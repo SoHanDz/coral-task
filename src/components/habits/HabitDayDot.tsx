@@ -6,6 +6,7 @@ const DOT_STYLES: Record<HabitDayState, string> = {
   "all-done": "bg-emerald-500",
   missed: "bg-slate-300",
   "no-habit": "border border-slate-300 bg-transparent",
+  future: "bg-slate-200",
 };
 
 interface HabitDayDotProps {

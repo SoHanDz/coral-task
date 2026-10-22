@@ -4,7 +4,7 @@ import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { getMonthsData, getYearProgress } from "@/lib/date/year-progress";
 import { toDateKey } from "@/lib/date/date-key";
-import { getDayState } from "@/lib/habits/stats";
+import { getDayState, type HabitDayState } from "@/lib/habits/stats";
 import { HabitDayDot } from "@/components/habits/HabitDayDot";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Habit, HabitLog } from "@/lib/habits/types";
@@ -54,11 +54,13 @@ function HabitYearGridImpl({ habits, habitLogs, referenceDate, className }: Habi
                 {month.days.map((cell) => {
                   const date = new Date(progress.year, month.index, cell.day);
                   const dateKey = toDateKey(date);
-                  const dayState = getDayState(habits, habitLogs, date);
+                  const dayState: HabitDayState =
+                    cell.state === "future" ? "future" : getDayState(habits, habitLogs, date);
                   const applicableCount = habits.filter((h) => toDateKey(h.createdAt) <= dateKey).length;
                   const completedCount = habitLogs.filter(
                     (log) => log.logDate === dateKey && log.completed
                   ).length;
+                  const hasCounts = dayState !== "no-habit" && dayState !== "future";
 
                   return (
                     <HabitDayDot
@@ -66,8 +68,8 @@ function HabitYearGridImpl({ habits, habitLogs, referenceDate, className }: Habi
                       dayState={dayState}
                       today={dateKey === todayKey}
                       title={`${month.label} ${cell.day}`}
-                      completedCount={dayState === "no-habit" ? undefined : completedCount}
-                      totalCount={dayState === "no-habit" ? undefined : applicableCount}
+                      completedCount={hasCounts ? completedCount : undefined}
+                      totalCount={hasCounts ? applicableCount : undefined}
                     />
                   );
                 })}

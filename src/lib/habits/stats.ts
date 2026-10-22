@@ -2,7 +2,7 @@ import { addDays, parseISO, subDays } from "date-fns";
 import { toDateKey } from "@/lib/date/date-key";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
-export type HabitDayState = "all-done" | "missed" | "no-habit";
+export type HabitDayState = "all-done" | "missed" | "no-habit" | "future";
 
 function logsByDate(logs: HabitLog[], habitId: string): Map<string, boolean> {
   const map = new Map<string, boolean>();
