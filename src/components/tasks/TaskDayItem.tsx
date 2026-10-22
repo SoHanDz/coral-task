@@ -58,7 +58,7 @@ export function TaskDayItem({
 
       <TaskFormDialog
         task={task}
-        onSubmit={(input) => onEdit(task.id, input)}
+        onSubmitTask={(input) => onEdit(task.id, input)}
         onDelete={onDelete}
         onStatusChange={onStatusChange}
         trigger={
@@ -71,9 +71,9 @@ export function TaskDayItem({
             >
               {task.title}
             </span>
-            {overdue && task.dueDate ? (
+            {overdue ? (
               <span className="text-xs font-medium text-destructive">
-                Đến hạn: {format(task.dueDate, "dd/MM")} (Trễ {overdueDays} ngày)
+                Đến hạn: {format(task.endDate, "dd/MM")} (Trễ {overdueDays} ngày)
               </span>
             ) : (
               task.subtasks.length > 0 && (
@@ -87,7 +87,7 @@ export function TaskDayItem({
       />
 
       <div className="flex shrink-0 items-center gap-2">
-        {task.dueDate && !overdue && <span className="text-xs text-slate-400">{format(task.dueDate, "HH:mm")}</span>}
+        {!overdue && <span className="text-xs text-slate-400">{format(task.endDate, "HH:mm")}</span>}
         {overdue && onRescheduleToToday && (
           <Button
             type="button"
