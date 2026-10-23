@@ -11,10 +11,13 @@ import type { HabitQuote } from "@/lib/habits/types";
 
 interface QuoteManagerDialogProps {
   quotes: HabitQuote[];
-  trigger: React.ReactElement;
+  /** Omit when the dialog is opened externally via `open`/`onOpenChange`. */
+  trigger?: React.ReactElement;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function QuoteManagerDialog({ quotes, trigger }: QuoteManagerDialogProps) {
+export function QuoteManagerDialog({ quotes, trigger, open, onOpenChange }: QuoteManagerDialogProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [newText, setNewText] = useState("");
@@ -49,8 +52,8 @@ export function QuoteManagerDialog({ quotes, trigger }: QuoteManagerDialogProps)
   }
 
   return (
-    <Dialog>
-      <DialogTrigger render={trigger} />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger render={trigger} />}
       <DialogContent className="sm:max-w-[480px] w-full p-6 bg-white rounded-2xl border-none shadow-xl">
         <DialogHeader>
           <DialogTitle>Quản lý quote</DialogTitle>

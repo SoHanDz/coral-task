@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Flame, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { Habit, HabitLog } from "@/lib/habits/types";
@@ -13,6 +13,8 @@ interface HabitChecklistItemProps {
   pending?: boolean;
   /** Clicking the row (not the checkbox) opens the habit's detail view. Omit to keep the row non-clickable. */
   onRowClick?: (habit: Habit) => void;
+  /** Current streak in days. Renders a 🔥 badge when >= 1; omit to hide it. */
+  streak?: number;
 }
 
 /**
@@ -20,7 +22,14 @@ interface HabitChecklistItemProps {
  * due time. When `onRowClick` is passed, the row itself opens the
  * detail/edit dialog — used on both the Todo page and the habit-tracking page.
  */
-export function HabitChecklistItem({ habit, log, onToggle, pending = false, onRowClick }: HabitChecklistItemProps) {
+export function HabitChecklistItem({
+  habit,
+  log,
+  onToggle,
+  pending = false,
+  onRowClick,
+  streak,
+}: HabitChecklistItemProps) {
   const completed = log?.completed ?? false;
 
   return (
@@ -51,6 +60,12 @@ export function HabitChecklistItem({ habit, log, onToggle, pending = false, onRo
       >
         {habit.title}
       </span>
+      {!!streak && streak >= 1 && (
+        <span className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-500">
+          <Flame className="size-3.5 fill-orange-400 text-orange-500" />
+          {streak} ngày
+        </span>
+      )}
       <span className="shrink-0 text-xs text-slate-400">{habit.dueTime}</span>
     </li>
   );

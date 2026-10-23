@@ -25,32 +25,33 @@ function HabitYearGridImpl({ habits, habitLogs, referenceDate, className }: Habi
   return (
     <div
       className={cn(
-        "rounded-2xl border border-slate-200/80 bg-white p-8 text-slate-800 shadow-sm",
+        "rounded-2xl border border-slate-200/80 bg-white p-5 text-slate-800 shadow-sm",
         className
       )}
     >
-      <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+      <header className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="font-mono text-xs tracking-widest text-slate-500">{progress.year}</p>
-          <p className="font-mono text-2xl font-semibold tracking-tight text-slate-800 sm:text-3xl">
+          <p className="font-mono text-xl font-semibold tracking-tight text-slate-800">
             DAY {String(progress.dayOfYear).padStart(3, "0")}
             <span className="text-slate-500"> / {progress.totalDaysInYear}</span>
           </p>
         </div>
         <div className="text-right">
-          <p className="font-mono text-2xl font-semibold text-primary sm:text-3xl">
-            {progress.percentComplete}%
-          </p>
-          <p className="text-xs tracking-wide text-slate-500">of {progress.year} completed</p>
+          <p className="font-mono text-xl font-semibold text-primary">{progress.percentComplete}%</p>
+          <p className="text-xs tracking-wide text-slate-500">of {progress.year}</p>
         </div>
       </header>
 
       <TooltipProvider>
-        <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5">
           {months.map((month) => (
-            <section key={month.index}>
-              <h3 className="mb-2 font-mono text-xs tracking-widest text-slate-500">{month.label}</h3>
-              <div className="grid grid-cols-7 gap-x-[6px] gap-y-[10px]">
+            <section
+              key={month.index}
+              className="rounded-xl border border-slate-200/80 bg-slate-50/50 p-2.5 transition-all hover:bg-white"
+            >
+              <h3 className="mb-1.5 font-mono text-[10px] tracking-widest text-slate-500">{month.label}</h3>
+              <div className="grid grid-cols-7 gap-x-[4px] gap-y-[7px]">
                 {month.days.map((cell) => {
                   const date = new Date(progress.year, month.index, cell.day);
                   const dateKey = toDateKey(date);

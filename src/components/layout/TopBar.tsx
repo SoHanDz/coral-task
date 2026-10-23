@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -16,6 +17,10 @@ interface TopBarProps {
   /** Omit to render a plain page title instead of the personalized greeting. */
   email?: string | null;
   title?: string;
+  /** Italicized line under `title` — e.g. an inspirational quote. Ignored without `title`. */
+  subtitle?: string;
+  /** Extra items rendered above the sign-out item in the avatar dropdown, with a separator below them. */
+  menuExtra?: React.ReactNode;
 }
 
 function getGreeting(now: Date) {
@@ -25,7 +30,7 @@ function getGreeting(now: Date) {
   return "Chào buổi tối";
 }
 
-export function TopBar({ email, title }: TopBarProps) {
+export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
   // Starts null so the initial (and prerendered) render never reads the
   // current time — Next's static prerendering rejects `new Date()` during
   // render. The real clock is filled in after mount, client-side only.
@@ -42,7 +47,10 @@ export function TopBar({ email, title }: TopBarProps) {
   return (
     <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-4 sm:px-8">
       {title ? (
-        <h1 className="text-xl font-bold text-slate-800">{title}</h1>
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-slate-800">{title}</h1>
+          {subtitle && <p className="mt-0.5 truncate text-sm italic text-slate-500">{subtitle}</p>}
+        </div>
       ) : now ? (
         <div>
           <p className="text-xs font-medium capitalize text-slate-500">{format(now, "EEEE", { locale: vi })}</p>
@@ -76,6 +84,12 @@ export function TopBar({ email, title }: TopBarProps) {
               }
             />
             <DropdownMenuContent align="end">
+              {menuExtra && (
+                <>
+                  {menuExtra}
+                  <DropdownMenuSeparator />
+                </>
+              )}
               <DropdownMenuItem
                 variant="destructive"
                 render={

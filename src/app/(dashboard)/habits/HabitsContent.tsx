@@ -2,7 +2,6 @@ import { connection } from "next/server";
 import { getHabits, getHabitLogs } from "@/app/actions/habits";
 import { getHabitQuotes } from "@/app/actions/habitQuotes";
 import { HabitsPageContent } from "@/components/habits/HabitsPageContent";
-import { TopBar } from "@/components/layout/TopBar";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
 
 export async function HabitsContent() {
@@ -16,8 +15,7 @@ export async function HabitsContent() {
 
   return (
     <div className="min-h-screen bg-slate-100/70">
-      <TopBar title="Dựng thói quen" email={email} />
-      <HabitsPageContent habits={habits} habitLogs={habitLogs} quotes={quotes} />
+      <HabitsPageContent habits={habits} habitLogs={habitLogs} quotes={quotes} email={email} />
     </div>
   );
 }
