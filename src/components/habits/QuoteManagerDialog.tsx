@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +14,11 @@ interface QuoteManagerDialogProps {
   trigger?: React.ReactElement;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Called after a quote is added, edited, or deleted, so the caller can refetch its own copy of the list. */
+  onChange?: () => void;
 }
 
-export function QuoteManagerDialog({ quotes, trigger, open, onOpenChange }: QuoteManagerDialogProps) {
-  const router = useRouter();
+export function QuoteManagerDialog({ quotes, trigger, open, onOpenChange, onChange }: QuoteManagerDialogProps) {
   const [, startTransition] = useTransition();
   const [newText, setNewText] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export function QuoteManagerDialog({ quotes, trigger, open, onOpenChange }: Quot
     setNewText("");
     startTransition(async () => {
       await createHabitQuote(text);
-      router.refresh();
+      onChange?.();
     });
   }
 
@@ -40,14 +40,14 @@ export function QuoteManagerDialog({ quotes, trigger, open, onOpenChange }: Quot
     setEditingId(null);
     startTransition(async () => {
       await updateHabitQuote(id, text);
-      router.refresh();
+      onChange?.();
     });
   }
 
   function handleDelete(id: string) {
     startTransition(async () => {
       await deleteHabitQuote(id);
-      router.refresh();
+      onChange?.();
     });
   }
 

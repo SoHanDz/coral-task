@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
+import { getHabitQuotes } from "@/app/actions/habitQuotes";
+import { QuoteManagerDialog } from "@/components/habits/QuoteManagerDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,15 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import type { HabitQuote } from "@/lib/habits/types";
 
 interface TopBarProps {
   /** Omit to render a plain page title instead of the personalized greeting. */
   email?: string | null;
   title?: string;
-  /** Italicized line under `title` — e.g. an inspirational quote. Ignored without `title`. */
-  subtitle?: string;
-  /** Extra items rendered above the sign-out item in the avatar dropdown, with a separator below them. */
-  menuExtra?: React.ReactNode;
 }
 
 function getGreeting(now: Date) {
@@ -30,13 +29,31 @@ function getGreeting(now: Date) {
   return "Chào buổi tối";
 }
 
-export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
+export function TopBar({ email, title }: TopBarProps) {
   // Starts null so the initial (and prerendered) render never reads the
   // current time — Next's static prerendering rejects `new Date()` during
   // render. The real clock is filled in after mount, client-side only.
   const [now, setNow] = useState<Date | null>(null);
   const displayName = email ? email.split("@")[0] : "bạn";
   const initial = (email?.[0] ?? "?").toUpperCase();
+
+  const [, startTransition] = useTransition();
+  const [quotes, setQuotes] = useState<HabitQuote[]>([]);
+  const [quote, setQuote] = useState<HabitQuote | null>(null);
+  const [quoteManagerOpen, setQuoteManagerOpen] = useState(false);
+
+  function refreshQuotes() {
+    startTransition(async () => {
+      const next = await getHabitQuotes();
+      setQuotes(next);
+      setQuote(next.length > 0 ? next[Math.floor(Math.random() * next.length)] : null);
+    });
+  }
+
+  useEffect(() => {
+    if (!email) return;
+    refreshQuotes();
+  }, [email]);
 
   useEffect(() => {
     if (title) return;
@@ -47,10 +64,7 @@ export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
   return (
     <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-4 sm:px-8">
       {title ? (
-        <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-800">{title}</h1>
-          {subtitle && <p className="mt-0.5 truncate text-sm italic text-slate-500">{subtitle}</p>}
-        </div>
+        <h1 className="text-xl font-bold text-slate-800">{title}</h1>
       ) : now ? (
         <div>
           <p className="text-xs font-medium capitalize text-slate-500">{format(now, "EEEE", { locale: vi })}</p>
@@ -64,13 +78,20 @@ export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
       )}
 
       {email && (
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 items-center gap-4">
           {!title && (
             <div className="min-w-0 text-right">
               <p className="text-xs font-medium text-slate-500">{now ? getGreeting(now) : " "}</p>
               <p className="truncate text-base font-semibold text-slate-800">{displayName}</p>
             </div>
           )}
+
+          {quote && (
+            <p className="hidden min-w-0 max-w-[200px] truncate text-sm font-semibold italic tracking-tight text-primary sm:block sm:max-w-xs md:max-w-sm md:text-base">
+              “{quote.text}”
+            </p>
+          )}
+
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -84,12 +105,8 @@ export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
               }
             />
             <DropdownMenuContent align="end">
-              {menuExtra && (
-                <>
-                  {menuExtra}
-                  <DropdownMenuSeparator />
-                </>
-              )}
+              <DropdownMenuItem onClick={() => setQuoteManagerOpen(true)}>Quản lý Quote</DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 render={
@@ -103,6 +120,13 @@ export function TopBar({ email, title, subtitle, menuExtra }: TopBarProps) {
               />
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <QuoteManagerDialog
+            quotes={quotes}
+            open={quoteManagerOpen}
+            onOpenChange={setQuoteManagerOpen}
+            onChange={refreshQuotes}
+          />
         </div>
       )}
     </header>

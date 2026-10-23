@@ -1,26 +1,23 @@
 "use client";
 
-import { useEffect, useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
 import { Button } from "@/components/ui/button";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { HabitChecklistItem } from "@/components/habits/HabitChecklistItem";
 import { HabitDetailDialog } from "@/components/habits/HabitDetailDialog";
 import { HabitFormDialog, type HabitFormInput } from "@/components/habits/HabitFormDialog";
 import { HabitFrequencyRow } from "@/components/habits/HabitFrequencyRow";
 import { HabitYearGrid } from "@/components/habits/HabitYearGrid";
-import { QuoteManagerDialog } from "@/components/habits/QuoteManagerDialog";
 import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toDateKey } from "@/lib/date/date-key";
 import { getCurrentStreak, rankByFrequency } from "@/lib/habits/stats";
-import type { Habit, HabitLog, HabitQuote } from "@/lib/habits/types";
+import type { Habit, HabitLog } from "@/lib/habits/types";
 
 interface HabitsPageContentProps {
   habits: Habit[];
   habitLogs: HabitLog[];
-  quotes: HabitQuote[];
   email?: string | null;
 }
 
@@ -38,25 +35,12 @@ function applyOptimisticHabitLog(state: HabitLog[], action: HabitLogAction): Hab
   return state.map((log, i) => (i === idx ? next : log));
 }
 
-export function HabitsPageContent({ habits, habitLogs, quotes, email }: HabitsPageContentProps) {
+export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageContentProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [optimisticLogs, applyOptimisticLog] = useOptimistic(habitLogs, applyOptimisticHabitLog);
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [quoteManagerOpen, setQuoteManagerOpen] = useState(false);
-
-  // Picked client-side on mount (not during render) so a prerendered page
-  // doesn't bake in one fixed quote — each load gets its own random pick.
-  const [quote, setQuote] = useState<HabitQuote | null>(null);
-  useEffect(() => {
-    if (quotes.length === 0) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: picks the quote client-side on mount so prerendering doesn't bake in one fixed quote
-      setQuote(null);
-      return;
-    }
-    setQuote(quotes[Math.floor(Math.random() * quotes.length)]);
-  }, [quotes]);
 
   const todayKey = toDateKey(new Date());
   const todayLogsByHabitId = new Map(
@@ -111,14 +95,7 @@ export function HabitsPageContent({ habits, habitLogs, quotes, email }: HabitsPa
 
   return (
     <>
-      <TopBar
-        title="Dựng thói quen"
-        subtitle={quote ? `"${quote.text}"` : undefined}
-        email={email}
-        menuExtra={
-          <DropdownMenuItem onClick={() => setQuoteManagerOpen(true)}>Quản lý Quote</DropdownMenuItem>
-        }
-      />
+      <TopBar title="Dựng thói quen" email={email} />
 
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-4 sm:p-8 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
@@ -199,8 +176,6 @@ export function HabitsPageContent({ habits, habitLogs, quotes, email }: HabitsPa
         onUpdate={handleUpdate}
         onDelete={handleDelete}
       />
-
-      <QuoteManagerDialog quotes={quotes} open={quoteManagerOpen} onOpenChange={setQuoteManagerOpen} />
     </>
   );
 }
