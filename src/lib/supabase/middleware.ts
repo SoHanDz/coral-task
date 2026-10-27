@@ -29,9 +29,11 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
-  const { data } = await supabase.auth.getUser();
+  // getClaims() checks the JWT locally and still refreshes an expired session,
+  // so the proxy no longer waits on an Auth server round trip per request.
+  const { data } = await supabase.auth.getClaims();
 
-  if (!data.user && isProtectedPath(request.nextUrl.pathname)) {
+  if (!data?.claims && isProtectedPath(request.nextUrl.pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", request.nextUrl.pathname);

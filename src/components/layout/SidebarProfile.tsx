@@ -1,17 +1,16 @@
 import { LogOut } from "lucide-react";
 import { connection } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserEmail } from "@/lib/supabase/require-user";
 import { signOut } from "@/app/login/actions";
 
 export async function SidebarProfile() {
   await connection();
-  const supabase = await createClient();
-  const { data } = await supabase.auth.getUser();
+  const email = await getCurrentUserEmail();
 
   return (
     <div className="flex items-center gap-2 border-t border-white/10 px-3 py-4">
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs text-slate-400">{data.user?.email ?? "Chưa đăng nhập"}</p>
+        <p className="truncate text-xs text-slate-400">{email ?? "Chưa đăng nhập"}</p>
       </div>
       <form action={signOut}>
         <button
