@@ -1,7 +1,14 @@
 "use client";
 
-import { Folder as FolderIcon, PencilIcon, PinIcon, Trash2Icon } from "lucide-react";
+import { Folder as FolderIcon, MoreVerticalIcon, PencilIcon, PinIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LinkFormDialog } from "@/components/resources/LinkFormDialog";
 import { LinkRow } from "@/components/resources/LinkRow";
 import { getIconComponent } from "@/components/resources/icon-options";
 import { cn } from "@/lib/utils";
@@ -10,6 +17,9 @@ import type { LinkFolder, QuickLink } from "@/lib/resources/types";
 interface FolderCardProps {
   folder: LinkFolder | null;
   links: QuickLink[];
+  /** All folders, for the add-link dialog's folder picker. */
+  folders: LinkFolder[];
+  onCreateLink: (input: { url: string; title: string; description?: string; folderId: string | null }) => void;
   onOpenLink: (id: string) => void;
   onCopyLink: (id: string) => void;
   onToggleLinkPinned: (id: string, next: boolean) => void;
@@ -23,6 +33,8 @@ interface FolderCardProps {
 export function FolderCard({
   folder,
   links,
+  folders,
+  onCreateLink,
   onOpenLink,
   onCopyLink,
   onToggleLinkPinned,
@@ -61,39 +73,45 @@ export function FolderCard({
           <span className="text-xs text-muted-foreground">{sortedLinks.length}</span>
         </div>
 
-        {folder && onEditFolder && onDeleteFolder && (
-          <div className="flex items-center gap-1">
-            {onToggleFolderPinned && (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={folder.isPinned ? "Bỏ ghim thư mục" : "Ghim thư mục lên đầu"}
-                onClick={() => onToggleFolderPinned(folder.id, !folder.isPinned)}
-              >
-                <PinIcon className={cn("size-4", folder.isPinned && "fill-current text-amber-500")} />
+        <div className="flex items-center gap-1">
+          <LinkFormDialog
+            trigger={
+              <Button type="button" variant="ghost" size="icon" aria-label="Thêm liên kết vào thư mục này">
+                <PlusIcon className="size-4" />
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Sửa thư mục"
-              onClick={() => onEditFolder(folder)}
-            >
-              <PencilIcon className="size-4" />
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Xóa thư mục"
-              onClick={() => onDeleteFolder(folder.id)}
-            >
-              <Trash2Icon className="size-4 text-destructive" />
-            </Button>
-          </div>
-        )}
+            }
+            folders={folders}
+            defaultFolderId={folder?.id ?? null}
+            onSubmit={onCreateLink}
+          />
+          {folder && onEditFolder && onDeleteFolder && (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button type="button" variant="ghost" size="icon" aria-label="Tùy chọn thư mục">
+                    <MoreVerticalIcon className="size-4" />
+                  </Button>
+                }
+              />
+              <DropdownMenuContent align="end">
+                {onToggleFolderPinned && (
+                  <DropdownMenuItem onClick={() => onToggleFolderPinned(folder.id, !folder.isPinned)}>
+                    <PinIcon className={cn(folder.isPinned && "fill-current text-amber-500")} />
+                    {folder.isPinned ? "Bỏ ghim" : "Ghim lên đầu"}
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={() => onEditFolder(folder)}>
+                  <PencilIcon />
+                  Sửa thư mục
+                </DropdownMenuItem>
+                <DropdownMenuItem variant="destructive" onClick={() => onDeleteFolder(folder.id)}>
+                  <Trash2Icon />
+                  Xóa thư mục
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
       </div>
 
       {sortedLinks.length === 0 ? (

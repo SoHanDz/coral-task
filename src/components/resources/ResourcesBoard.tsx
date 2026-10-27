@@ -204,6 +204,8 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
               key={folder.id}
               folder={folder}
               links={linksFor(folder.id, folder)}
+              folders={folders}
+              onCreateLink={handleCreateLink}
               onOpenLink={handleOpenLink}
               onCopyLink={handleCopyLink}
               onToggleLinkPinned={handleTogglePinned}
@@ -219,6 +221,8 @@ export function ResourcesBoard({ folders, links }: ResourcesBoardProps) {
             <FolderCard
               folder={null}
               links={uncategorizedLinks}
+              folders={folders}
+              onCreateLink={handleCreateLink}
               onOpenLink={handleOpenLink}
               onCopyLink={handleCopyLink}
               onToggleLinkPinned={handleTogglePinned}

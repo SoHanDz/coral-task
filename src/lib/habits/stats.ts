@@ -2,7 +2,15 @@ import { addDays, parseISO, subDays } from "date-fns";
 import { toDateKey } from "@/lib/date/date-key";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
-export type HabitDayState = "all-done" | "missed" | "no-habit" | "future";
+/** 0 = nothing done (grey) … 4 = everything done (darkest green), GitHub-contribution style. */
+export type HabitIntensity = 0 | 1 | 2 | 3 | 4;
+
+export interface HabitDayCompletion {
+  /** Habits that already existed on this date. */
+  total: number;
+  completed: number;
+  level: HabitIntensity;
+}
 
 function logsByDate(logs: HabitLog[], habitId: string): Map<string, boolean> {
   const map = new Map<string, boolean>();
@@ -12,20 +20,28 @@ function logsByDate(logs: HabitLog[], habitId: string): Map<string, boolean> {
   return map;
 }
 
-/**
- * Per-day state for the year grid: "no-habit" if no habit existed yet on
- * that date (every habit's createdAt is after it); else "all-done" only if
- * every habit that existed by then was completed that day; else "missed".
- */
-export function getDayState(habits: Habit[], logs: HabitLog[], date: Date): HabitDayState {
-  const applicable = habits.filter((habit) => toDateKey(habit.createdAt) <= toDateKey(date));
-  if (applicable.length === 0) return "no-habit";
+/** Buckets a completion ratio: 0 → 0, ≤25% → 1, ≤50% → 2, <100% → 3, 100% → 4. */
+export function getIntensityLevel(completed: number, total: number): HabitIntensity {
+  if (total === 0 || completed === 0) return 0;
+  const ratio = completed / total;
+  if (ratio >= 1) return 4;
+  if (ratio > 0.5) return 3;
+  if (ratio > 0.25) return 2;
+  return 1;
+}
 
+/**
+ * Per-day completion for the calendar grid. Only habits whose createdAt is on
+ * or before the date count, so adding a habit today doesn't retroactively
+ * lower past days. `total === 0` means no habit existed yet on that date.
+ */
+export function getDayCompletion(habits: Habit[], logs: HabitLog[], date: Date): HabitDayCompletion {
   const dateKey = toDateKey(date);
-  const allDone = applicable.every((habit) =>
+  const applicable = habits.filter((habit) => toDateKey(habit.createdAt) <= dateKey);
+  const completed = applicable.filter((habit) =>
     logs.some((log) => log.habitId === habit.id && log.logDate === dateKey && log.completed)
-  );
-  return allDone ? "all-done" : "missed";
+  ).length;
+  return { total: applicable.length, completed, level: getIntensityLevel(completed, applicable.length) };
 }
 
 /** Consecutive completed days ending today (0 if today itself isn't completed). */

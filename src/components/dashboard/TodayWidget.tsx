@@ -13,7 +13,7 @@ interface TodayWidgetProps {
 export function TodayWidget({ tasks, selectedDate, onSelectDate }: TodayWidgetProps) {
   return (
     <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-      <CardContent className="flex flex-col gap-5 px-8 py-8">
+      <CardContent className="flex flex-col gap-5 px-4 py-6 sm:px-8 sm:py-8">
         <DashboardCalendarCard tasks={tasks} selectedDate={selectedDate} onSelectDate={onSelectDate} />
 
         <Link

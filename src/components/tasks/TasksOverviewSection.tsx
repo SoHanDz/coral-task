@@ -1,7 +1,9 @@
 "use client";
 
 import { useOptimistic, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowRight } from "lucide-react";
 import { endOfDay, startOfDay } from "date-fns";
 import { createTask, deleteTask, rescheduleTaskToToday, updateTask, updateTaskStatus } from "@/app/actions/tasks";
 import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
@@ -251,7 +253,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   return (
     <div className="flex flex-col gap-6">
       <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-        <CardHeader className="flex flex-row items-center justify-between px-8 pt-8">
+        <CardHeader className="flex flex-row items-center justify-between px-4 pt-6 sm:px-8 sm:pt-8">
           <CardTitle className="text-lg font-semibold text-slate-700">Công việc cần làm</CardTitle>
           <TaskFormDialog
             trigger={<Button type="button">+ Thêm công việc</Button>}
@@ -259,7 +261,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
             onSubmitHabit={handleCreateHabit}
           />
         </CardHeader>
-        <CardContent className="flex flex-col gap-6 px-8 pb-8">
+        <CardContent className="flex flex-col gap-6 px-4 pb-6 sm:px-8 sm:pb-8">
           {orderedDayTasks.length === 0 ? (
             <p className="text-sm text-slate-500">Không có việc nào vào ngày này.</p>
           ) : (
@@ -282,10 +284,17 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
       </Card>
 
       <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-        <CardHeader className="px-8 pt-8">
+        <CardHeader className="flex flex-row items-center justify-between px-4 pt-6 sm:px-8 sm:pt-8">
           <CardTitle className="text-lg font-semibold text-slate-700">Thói quen hàng ngày</CardTitle>
+          <Link
+            href="/habits"
+            className="flex items-center gap-1 text-sm font-medium text-primary transition-colors duration-200 hover:underline"
+          >
+            Xem chi tiết
+            <ArrowRight className="size-4" />
+          </Link>
         </CardHeader>
-        <CardContent className="flex flex-col gap-6 px-8 pb-8">
+        <CardContent className="flex flex-col gap-6 px-4 pb-6 sm:px-8 sm:pb-8">
           {habits.length === 0 ? (
             <p className="text-sm text-slate-500">Chưa có thói quen nào.</p>
           ) : (

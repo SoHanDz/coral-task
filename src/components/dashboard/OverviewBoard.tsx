@@ -29,7 +29,7 @@ export function OverviewBoard({ tasks, habits, habitLogs, events }: OverviewBoar
         <TodayWidget tasks={tasks} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
 
         <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-          <CardContent className="px-8 py-8">
+          <CardContent className="px-4 py-6 sm:px-8 sm:py-8">
             <EventsListSection events={events} maxDaysAhead={7} />
           </CardContent>
         </Card>

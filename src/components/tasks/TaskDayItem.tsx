@@ -73,7 +73,7 @@ export function TaskDayItem({
           <button type="button" className="flex min-w-0 flex-1 flex-col items-start gap-0.5 text-left">
             <span
               className={cn(
-                "truncate text-sm font-medium",
+                "max-w-full break-words text-sm font-medium line-clamp-2",
                 completed ? "text-slate-500 line-through" : overdue ? "font-bold text-destructive" : "text-slate-800"
               )}
             >
@@ -95,21 +95,23 @@ export function TaskDayItem({
       />
 
       <div className="flex shrink-0 items-center gap-2">
-        {!overdue && <span className="text-xs text-slate-400">{format(task.endDate, "HH:mm")}</span>}
-        {overdue && onRescheduleToToday && (
+        {!overdue && <span className="text-xs text-slate-400">{format(task.endDate, "HH:mm")}</span>}        {overdue && onRescheduleToToday && (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            className="h-7 gap-1 border-destructive/30 px-2 text-xs text-destructive transition-colors duration-200 hover:bg-destructive/10"
+            aria-label="Dời sang hôm nay"
+            title="Dời sang hôm nay"
+            className="size-8 border-destructive/30 p-0 text-xs text-destructive transition-colors duration-200 hover:bg-destructive/10 sm:h-7 sm:w-auto sm:gap-1 sm:px-2"
             onClick={() => onRescheduleToToday(task.id)}
             disabled={pending}
           >
-            <CalendarArrowUp className="size-3.5" />
-            Dời sang hôm nay
+            <CalendarArrowUp className="size-4 sm:size-3.5" />
+            <span className="hidden sm:inline">Dời sang hôm nay</span>
           </Button>
         )}
-        {overdue && <Badge className="border-none bg-destructive text-white">Trễ hạn</Badge>}
+        {/* On mobile the red "Trễ N ngày" subtitle already says this. */}
+        {overdue && <Badge className="hidden border-none bg-destructive text-white sm:inline-flex">Trễ hạn</Badge>}
       </div>
     </li>
   );

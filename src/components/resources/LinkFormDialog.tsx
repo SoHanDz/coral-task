@@ -29,6 +29,8 @@ interface LinkFormDialogProps {
   nativeButton?: boolean;
   link?: QuickLink;
   folders: LinkFolder[];
+  /** Pre-selected folder when creating a link (ignored when editing `link`). */
+  defaultFolderId?: string | null;
   /** Omit both to let the dialog manage its own open state. Pass both when
    * another component opens this dialog programmatically (see
    * `editingLink` in ResourcesBoard, Task 6). */
@@ -50,6 +52,7 @@ export function LinkFormDialog({
   nativeButton = true,
   link,
   folders,
+  defaultFolderId = null,
   open: controlledOpen,
   onOpenChange: setControlledOpen,
   onSubmit,
@@ -61,7 +64,7 @@ export function LinkFormDialog({
   const [url, setUrl] = useState(link?.url ?? "");
   const [title, setTitle] = useState(link?.title ?? "");
   const [description, setDescription] = useState(link?.description ?? "");
-  const [folderId, setFolderId] = useState<string>(link?.folderId ?? NO_FOLDER_VALUE);
+  const [folderId, setFolderId] = useState<string>(link ? (link.folderId ?? NO_FOLDER_VALUE) : (defaultFolderId ?? NO_FOLDER_VALUE));
   const [faviconPreview, setFaviconPreview] = useState<string | null>(link?.imageUrl ?? null);
   const [urlError, setUrlError] = useState<string | null>(null);
 
@@ -70,7 +73,7 @@ export function LinkFormDialog({
       setUrl(link?.url ?? "");
       setTitle(link?.title ?? "");
       setDescription(link?.description ?? "");
-      setFolderId(link?.folderId ?? NO_FOLDER_VALUE);
+      setFolderId(link ? (link.folderId ?? NO_FOLDER_VALUE) : (defaultFolderId ?? NO_FOLDER_VALUE));
       setFaviconPreview(link?.imageUrl ?? null);
       setUrlError(null);
     }
@@ -160,7 +163,13 @@ export function LinkFormDialog({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label>Thư mục</Label>
-            <Select value={folderId} onValueChange={(value) => setFolderId(value as string)}>
+            <Select
+              value={folderId}
+              items={[
+                { value: NO_FOLDER_VALUE, label: "Chưa phân loại" },
+                ...folders.map((folder) => ({ value: folder.id, label: folder.name })),
+              ]}
+              onValueChange={(value) => setFolderId(value as string)}>
               <SelectTrigger>
                 <SelectValue placeholder="Chưa phân loại" />
               </SelectTrigger>

@@ -21,6 +21,9 @@ interface HabitsPageContentProps {
   email?: string | null;
 }
 
+/** Habits shown before the list collapses behind "Xem thêm". */
+const COLLAPSED_HABIT_COUNT = 5;
+
 type HabitLogAction = { habitId: string; logDate: string; completed: boolean };
 
 function applyOptimisticHabitLog(state: HabitLog[], action: HabitLogAction): HabitLog[] {
@@ -41,6 +44,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const [optimisticLogs, applyOptimisticLog] = useOptimistic(habitLogs, applyOptimisticHabitLog);
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  const [showAllHabits, setShowAllHabits] = useState(false);
 
   const todayKey = toDateKey(new Date());
   const todayLogsByHabitId = new Map(
@@ -89,6 +93,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const topHabit = ranked[0]?.habit;
   const topStreak = topHabit ? getCurrentStreak(topHabit.id, optimisticLogs, new Date()) : 0;
   const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
+  const visibleHabits = showAllHabits ? habits : habits.slice(0, COLLAPSED_HABIT_COUNT);
 
   const completedToday = habits.filter((h) => todayLogsByHabitId.get(h.id)?.completed).length;
   const completionPercent = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
@@ -99,6 +104,24 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
 
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-4 sm:p-8 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
+          {habits.length > 0 && (
+            <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
+              <CardHeader className="px-8 pt-8">
+                <CardTitle className="text-lg font-semibold text-slate-700">Thống kê thói quen</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-5 px-8 pb-8">
+                <HabitFrequencyRow habits={habits} habitLogs={optimisticLogs} />
+
+                {topHabit && topStreak >= 1 && (
+                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+                    🔥 Bạn đã liên tục thực hiện <span className="font-semibold">{topHabit.title}</span> trong{" "}
+                    {topStreak} ngày
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
             <CardHeader className="flex flex-row items-center justify-between px-8 pt-8">
               <CardTitle className="text-lg font-semibold text-slate-700">Thói quen hôm nay</CardTitle>
@@ -125,7 +148,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                   </div>
 
                   <ul className="flex flex-col gap-2">
-                    {habits.map((habit) => (
+                    {visibleHabits.map((habit) => (
                       <HabitChecklistItem
                         key={habit.id}
                         habit={habit}
@@ -137,28 +160,21 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                       />
                     ))}
                   </ul>
+
+                  {habits.length > COLLAPSED_HABIT_COUNT && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="self-center text-slate-600"
+                      onClick={() => setShowAllHabits((prev) => !prev)}
+                    >
+                      {showAllHabits ? "Thu gọn" : `Xem thêm (${habits.length - COLLAPSED_HABIT_COUNT})`}
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>
           </Card>
-
-          {habits.length > 0 && (
-            <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-              <CardHeader className="px-8 pt-8">
-                <CardTitle className="text-lg font-semibold text-slate-700">Thống kê thói quen</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-5 px-8 pb-8">
-                <HabitFrequencyRow habits={habits} habitLogs={optimisticLogs} />
-
-                {topHabit && topStreak >= 1 && (
-                  <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
-                    🔥 Bạn đã liên tục thực hiện <span className="font-semibold">{topHabit.title}</span> trong{" "}
-                    {topStreak} ngày
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="lg:col-span-1">
