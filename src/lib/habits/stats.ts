@@ -31,13 +31,24 @@ export function getIntensityLevel(completed: number, total: number): HabitIntens
 }
 
 /**
- * Per-day completion for the calendar grid. Only habits whose createdAt is on
- * or before the date count, so adding a habit today doesn't retroactively
- * lower past days. `total === 0` means no habit existed yet on that date.
+ * Habits that count on a given day: those created on or before it (so adding a
+ * habit today doesn't retroactively lower past days), plus any that already
+ * have a completed log that day. Both the day's checklist and the calendar grid
+ * use this, so the numbers they show can't drift apart.
  */
+export function getHabitsForDate(habits: Habit[], logs: HabitLog[], date: Date): Habit[] {
+  const dateKey = toDateKey(date);
+  return habits.filter(
+    (habit) =>
+      toDateKey(habit.createdAt) <= dateKey ||
+      logs.some((log) => log.habitId === habit.id && log.logDate === dateKey && log.completed)
+  );
+}
+
+/** Per-day completion for the calendar grid. `total === 0` means no habit existed yet on that date. */
 export function getDayCompletion(habits: Habit[], logs: HabitLog[], date: Date): HabitDayCompletion {
   const dateKey = toDateKey(date);
-  const applicable = habits.filter((habit) => toDateKey(habit.createdAt) <= dateKey);
+  const applicable = getHabitsForDate(habits, logs, date);
   const completed = applicable.filter((habit) =>
     logs.some((log) => log.habitId === habit.id && log.logDate === dateKey && log.completed)
   ).length;

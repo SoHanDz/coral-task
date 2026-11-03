@@ -2,6 +2,8 @@
 
 import { useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { addDays, endOfDay, format, isAfter } from "date-fns";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
 import { Button } from "@/components/ui/button";
 import { HabitChecklistItem } from "@/components/habits/HabitChecklistItem";
@@ -11,8 +13,9 @@ import { HabitFrequencyRow } from "@/components/habits/HabitFrequencyRow";
 import { HabitYearGrid } from "@/components/habits/HabitYearGrid";
 import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DatePicker } from "@/components/ui/date-picker";
 import { toDateKey } from "@/lib/date/date-key";
-import { getCurrentStreak, rankByFrequency } from "@/lib/habits/stats";
+import { getCurrentStreak, getHabitsForDate, rankByFrequency } from "@/lib/habits/stats";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
 interface HabitsPageContentProps {
@@ -20,9 +23,6 @@ interface HabitsPageContentProps {
   habitLogs: HabitLog[];
   email?: string | null;
 }
-
-/** Habits shown before the list collapses behind "Xem thêm". */
-const COLLAPSED_HABIT_COUNT = 5;
 
 type HabitLogAction = { habitId: string; logDate: string; completed: boolean };
 
@@ -44,19 +44,24 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const [optimisticLogs, applyOptimisticLog] = useOptimistic(habitLogs, applyOptimisticHabitLog);
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  const [showAllHabits, setShowAllHabits] = useState(false);
 
-  const todayKey = toDateKey(new Date());
-  const todayLogsByHabitId = new Map(
-    optimisticLogs.filter((log) => log.logDate === todayKey).map((log) => [log.habitId, log])
+  // The day being ticked. Defaults to today; the switcher lets you go back to
+  // fill in a day you forgot (never forward - a future day can't be done yet).
+  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const selectedKey = toDateKey(selectedDate);
+  const isToday = selectedKey === toDateKey(new Date());
+  const dayLabel = isToday ? "hôm nay" : format(selectedDate, "dd/MM/yyyy");
+
+  const selectedLogsByHabitId = new Map(
+    optimisticLogs.filter((log) => log.logDate === selectedKey).map((log) => [log.habitId, log])
   );
 
   function handleToggle(habitId: string, completed: boolean) {
     setPendingHabitIds((prev) => new Set(prev).add(habitId));
     startTransition(async () => {
       try {
-        applyOptimisticLog({ habitId, logDate: todayKey, completed });
-        await setHabitLogStatus(habitId, todayKey, completed);
+        applyOptimisticLog({ habitId, logDate: selectedKey, completed });
+        await setHabitLogStatus(habitId, selectedKey, completed);
         router.refresh();
       } finally {
         setPendingHabitIds((prev) => {
@@ -93,10 +98,12 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const topHabit = ranked[0]?.habit;
   const topStreak = topHabit ? getCurrentStreak(topHabit.id, optimisticLogs, new Date()) : 0;
   const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
-  const visibleHabits = showAllHabits ? habits : habits.slice(0, COLLAPSED_HABIT_COUNT);
+  // Same habit set the calendar grid counts for this day, so the checklist,
+  // the progress bar and the grid tooltip always agree.
+  const dayHabits = getHabitsForDate(habits, optimisticLogs, selectedDate);
 
-  const completedToday = habits.filter((h) => todayLogsByHabitId.get(h.id)?.completed).length;
-  const completionPercent = habits.length > 0 ? Math.round((completedToday / habits.length) * 100) : 0;
+  const completedOnDay = dayHabits.filter((h) => selectedLogsByHabitId.get(h.id)?.completed).length;
+  const completionPercent = dayHabits.length > 0 ? Math.round((completedOnDay / dayHabits.length) * 100) : 0;
 
   return (
     <>
@@ -124,19 +131,56 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
 
           <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
             <CardHeader className="flex flex-row items-center justify-between px-8 pt-8">
-              <CardTitle className="text-lg font-semibold text-slate-700">Thói quen hôm nay</CardTitle>
+              <CardTitle className="text-lg font-semibold text-slate-700">
+                {isToday ? "Thói quen hôm nay" : `Thói quen ngày ${dayLabel}`}
+              </CardTitle>
               <HabitFormDialog trigger={<Button type="button">+ Thêm thói quen</Button>} onSubmit={handleCreate} />
             </CardHeader>
             <CardContent className="flex flex-col gap-5 px-8 pb-8">
-              {habits.length === 0 ? (
-                <p className="text-sm text-slate-500">Chưa có thói quen nào.</p>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Ngày trước"
+                  onClick={() => setSelectedDate((prev) => addDays(prev, -1))}
+                >
+                  <ChevronLeftIcon className="size-4" />
+                </Button>
+                <DatePicker
+                  className="min-w-0 flex-1 justify-center"
+                  value={selectedDate}
+                  onChange={(date) => date && setSelectedDate(date)}
+                  disabled={(date) => isAfter(date, endOfDay(new Date()))}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Ngày sau"
+                  disabled={isToday}
+                  onClick={() => setSelectedDate((prev) => addDays(prev, 1))}
+                >
+                  <ChevronRightIcon className="size-4" />
+                </Button>
+                {!isToday && (
+                  <Button type="button" variant="ghost" onClick={() => setSelectedDate(new Date())}>
+                    Hôm nay
+                  </Button>
+                )}
+              </div>
+
+              {dayHabits.length === 0 ? (
+                <p className="text-sm text-slate-500">
+                  {habits.length === 0 ? "Chưa có thói quen nào." : "Chưa có thói quen nào vào ngày này."}
+                </p>
               ) : (
                 <>
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-baseline justify-between text-xs font-medium text-slate-500">
-                      <span>Tiến độ hôm nay</span>
+                      <span>{isToday ? "Tiến độ hôm nay" : `Tiến độ ngày ${dayLabel}`}</span>
                       <span className="font-mono text-slate-700">
-                        {completedToday}/{habits.length} · {completionPercent}%
+                        {completedOnDay}/{dayHabits.length} · {completionPercent}%
                       </span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
@@ -147,12 +191,12 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                     </div>
                   </div>
 
-                  <ul className="flex flex-col gap-2">
-                    {visibleHabits.map((habit) => (
+                  <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto pr-1">
+                    {dayHabits.map((habit) => (
                       <HabitChecklistItem
                         key={habit.id}
                         habit={habit}
-                        log={todayLogsByHabitId.get(habit.id)}
+                        log={selectedLogsByHabitId.get(habit.id)}
                         onToggle={handleToggle}
                         pending={pendingHabitIds.has(habit.id)}
                         onRowClick={(h) => setSelectedHabitId(h.id)}
@@ -160,17 +204,6 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                       />
                     ))}
                   </ul>
-
-                  {habits.length > COLLAPSED_HABIT_COUNT && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      className="self-center text-slate-600"
-                      onClick={() => setShowAllHabits((prev) => !prev)}
-                    >
-                      {showAllHabits ? "Thu gọn" : `Xem thêm (${habits.length - COLLAPSED_HABIT_COUNT})`}
-                    </Button>
-                  )}
                 </>
               )}
             </CardContent>

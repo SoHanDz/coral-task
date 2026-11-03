@@ -15,6 +15,13 @@ import { HabitDetailDialog } from "@/components/habits/HabitDetailDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toDateKey } from "@/lib/date/date-key";
 import type { Habit, HabitLog } from "@/lib/habits/types";
+import {
+  getVisibleOccurrences,
+  isOccurrenceId,
+  templateIdOf,
+  type OccurrenceCompletions,
+  type RecurringTask,
+} from "@/lib/tasks/recurrence";
 import type { Task, TaskStatus } from "@/lib/tasks/types";
 
 interface TasksOverviewSectionProps {
@@ -98,6 +105,11 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
+  // TODO(api): weekly/monthly tasks live only in client state until the backend
+  // has a recurrence column + a per-occurrence completion table. Both shapes
+  // below map 1:1 onto that (template row + (template_id, date) completion row).
+  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
+  const [occurrenceCompletions, setOccurrenceCompletions] = useState<OccurrenceCompletions>({});
 
   function withTaskPending(id: string, fn: () => Promise<void>) {
     setPendingTaskIds((prev) => new Set(prev).add(id));
@@ -130,6 +142,18 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   }
 
   function handleCreate(input: TaskFormInput) {
+    if (input.recurrence) {
+      const template: RecurringTask = {
+        id: crypto.randomUUID(),
+        title: input.title,
+        description: input.description,
+        recurrence: input.recurrence,
+        createdAt: new Date(),
+      };
+      setRecurringTasks((prev) => [...prev, template]);
+      return;
+    }
+
     const optimisticTask: Task = {
       id: crypto.randomUUID(),
       title: input.title,
@@ -156,6 +180,24 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   }
 
   function handleEdit(id: string, input: TaskFormInput) {
+    // Editing any occurrence edits the shared weekly/monthly definition.
+    if (isOccurrenceId(id)) {
+      const templateId = templateIdOf(id);
+      setRecurringTasks((prev) =>
+        prev.map((template) =>
+          template.id === templateId
+            ? {
+                ...template,
+                title: input.title,
+                description: input.description,
+                recurrence: input.recurrence ?? template.recurrence,
+              }
+            : template
+        )
+      );
+      return;
+    }
+
     startTransition(async () => {
       applyOptimistic({ type: "edit", id, input });
       await updateTask(id, input);
@@ -164,6 +206,16 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   }
 
   function handleToggleStatus(id: string) {
+    // An occurrence is only ever flagged done/undone under its own
+    // `template::date` key - nothing is created, so an overdue one can't duplicate.
+    if (isOccurrenceId(id)) {
+      setOccurrenceCompletions((prev) => {
+        if (prev[id]) return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== id));
+        return { ...prev, [id]: new Date() };
+      });
+      return;
+    }
+
     const task = optimisticTasks.find((t) => t.id === id);
     if (!task) return;
     const nextStatus = task.status === "pending" ? "completed" : "pending";
@@ -185,6 +237,15 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   }
 
   function handleDelete(id: string) {
+    if (isOccurrenceId(id)) {
+      const templateId = templateIdOf(id);
+      setRecurringTasks((prev) => prev.filter((template) => template.id !== templateId));
+      setOccurrenceCompletions((prev) =>
+        Object.fromEntries(Object.entries(prev).filter(([key]) => templateIdOf(key) !== templateId))
+      );
+      return;
+    }
+
     startTransition(async () => {
       applyOptimistic({ type: "delete", id });
       await deleteTask(id);
@@ -229,21 +290,21 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
 
   // "Hôm nay" rolls every unfinished past-due task forward so nothing gets
   // silently skipped: status='pending' AND its whole window already ended.
-  const orderedDayTasks = isTodaySelected
-    ? [
-        ...optimisticTasks
-          .filter((task) => task.status === "pending" && toDateKey(task.endDate) < todayKey)
-          .sort((a, b) => a.endDate.getTime() - b.endDate.getTime()),
-        ...optimisticTasks.filter((task) => task.status === "pending" && isTaskOnDay(task, todayKey)),
-        ...optimisticTasks.filter((task) => task.status === "completed" && isTaskOnDay(task, todayKey)),
-      ]
-    : (() => {
-        const dayTasks = optimisticTasks.filter((task) => isTaskOnDay(task, selectedKey));
-        return [
-          ...dayTasks.filter((task) => task.status === "pending"),
-          ...dayTasks.filter((task) => task.status === "completed"),
-        ];
-      })();
+  // Weekly/monthly occurrences follow the same rule (see getVisibleOccurrences).
+  const oneTimeTasks = optimisticTasks.filter((task) =>
+    isTodaySelected
+      ? isTaskOnDay(task, todayKey) || (task.status === "pending" && toDateKey(task.endDate) < todayKey)
+      : isTaskOnDay(task, selectedKey)
+  );
+  const dayTasks = [...oneTimeTasks, ...getVisibleOccurrences(recurringTasks, occurrenceCompletions, selectedDate)];
+
+  // Pending first, nearest deadline on top (overdue ones have the earliest, so
+  // they naturally lead); finished tasks sink to the bottom in the same order.
+  const byDeadline = (a: Task, b: Task) => a.endDate.getTime() - b.endDate.getTime();
+  const orderedDayTasks = [
+    ...dayTasks.filter((task) => task.status === "pending").sort(byDeadline),
+    ...dayTasks.filter((task) => task.status === "completed").sort(byDeadline),
+  ];
 
   const habitLogsByHabitId = new Map(
     optimisticHabitLogs.filter((log) => log.logDate === selectedKey).map((log) => [log.habitId, log])

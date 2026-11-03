@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/app/login/actions";
-import { getHabitQuotes } from "@/app/actions/habitQuotes";
 import { QuoteManagerDialog } from "@/components/habits/QuoteManagerDialog";
+import { useQuotes } from "@/components/mascot/QuotesProvider";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { HabitQuote } from "@/lib/habits/types";
 
 interface TopBarProps {
   /** Omit to render a plain page title instead of the personalized greeting. */
@@ -37,23 +36,9 @@ export function TopBar({ email, title }: TopBarProps) {
   const displayName = email ? email.split("@")[0] : "bạn";
   const initial = (email?.[0] ?? "?").toUpperCase();
 
-  const [, startTransition] = useTransition();
-  const [quotes, setQuotes] = useState<HabitQuote[]>([]);
-  const [quote, setQuote] = useState<HabitQuote | null>(null);
+  // Quotes are shown by the ghost mascot now; the top bar only manages them.
+  const { quotes, refreshQuotes } = useQuotes();
   const [quoteManagerOpen, setQuoteManagerOpen] = useState(false);
-
-  function refreshQuotes() {
-    startTransition(async () => {
-      const next = await getHabitQuotes();
-      setQuotes(next);
-      setQuote(next.length > 0 ? next[Math.floor(Math.random() * next.length)] : null);
-    });
-  }
-
-  useEffect(() => {
-    if (!email) return;
-    refreshQuotes();
-  }, [email]);
 
   useEffect(() => {
     if (title) return;
@@ -84,12 +69,6 @@ export function TopBar({ email, title }: TopBarProps) {
               <p className="text-xs font-medium text-slate-500">{now ? getGreeting(now) : " "}</p>
               <p className="truncate text-base font-semibold text-slate-800">{displayName}</p>
             </div>
-          )}
-
-          {quote && (
-            <p className="hidden min-w-0 max-w-[200px] truncate text-sm font-semibold italic tracking-tight text-primary sm:block sm:max-w-xs md:max-w-sm md:text-base">
-              “{quote.text}”
-            </p>
           )}
 
           <DropdownMenu>

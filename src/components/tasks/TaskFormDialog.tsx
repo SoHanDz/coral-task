@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getCompletionDelay } from "@/lib/tasks/overdue";
-import type { Subtask, Task, TaskStatus } from "@/lib/tasks/types";
+import type { Subtask, Task, TaskRecurrence, TaskStatus } from "@/lib/tasks/types";
 import { cn } from "@/lib/utils";
 
 export interface TaskFormInput {
@@ -33,7 +33,34 @@ export interface TaskFormInput {
   startDate: Date;
   endDate: Date;
   subtasks: Subtask[];
+  /** Set for weekly/monthly tasks; startDate/endDate are then unused. */
+  recurrence?: TaskRecurrence;
 }
+
+type TaskKind = "once" | "daily" | "weekly" | "monthly";
+
+const KIND_OPTIONS: { value: TaskKind; label: string }[] = [
+  { value: "once", label: "Chỉ một lần" },
+  { value: "daily", label: "Hàng ngày" },
+  { value: "weekly", label: "Hàng tuần" },
+  { value: "monthly", label: "Hàng tháng" },
+];
+
+/** 0 = Sunday, matching `Date#getDay`; listed Monday-first. */
+const WEEKDAY_OPTIONS = [
+  { value: 1, short: "T2", label: "Thứ 2" },
+  { value: 2, short: "T3", label: "Thứ 3" },
+  { value: 3, short: "T4", label: "Thứ 4" },
+  { value: 4, short: "T5", label: "Thứ 5" },
+  { value: 5, short: "T6", label: "Thứ 6" },
+  { value: 6, short: "T7", label: "Thứ 7" },
+  { value: 0, short: "CN", label: "Chủ nhật" },
+];
+
+const MONTH_DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => ({
+  value: String(i + 1),
+  label: `Ngày ${i + 1}`,
+}));
 
 export interface HabitFormInput {
   title: string;
@@ -70,7 +97,9 @@ export function TaskFormDialog({
   onStatusChange,
 }: TaskFormDialogProps) {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<"once" | "daily">("once");
+  const [kind, setKind] = useState<TaskKind>("once");
+  const [weekdays, setWeekdays] = useState<number[]>([1]);
+  const [monthDay, setMonthDay] = useState("1");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState<Date>(defaultStartDate());
@@ -82,8 +111,10 @@ export function TaskFormDialog({
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? "pending");
 
   // Editing an existing task always uses the task-shaped fields; creating
-  // a new item switches shape based on the "Loại" selector.
-  const isTaskShape = Boolean(task) || kind === "once";
+  // a new item switches shape based on the "Loại" selector. Only "Hàng ngày"
+  // creates a habit; weekly/monthly are tasks that carry a recurrence.
+  const isTaskShape = Boolean(task) || kind !== "daily";
+  const recurringType = task ? task.recurrence?.type : kind === "weekly" || kind === "monthly" ? kind : undefined;
 
   function resetForm() {
     setKind("once");
@@ -91,11 +122,18 @@ export function TaskFormDialog({
     setDescription(task?.description ?? "");
     setStartDate(task?.startDate ?? defaultStartDate());
     setEndDate(task?.endDate ?? defaultEndDate());
-    setDueTime("23:59");
+    setWeekdays(task?.recurrence?.type === "weekly" ? task.recurrence.weekdays : [1]);
+    setMonthDay(task?.recurrence?.type === "monthly" ? String(task.recurrence.monthDay) : "1");
+    setDueTime(task?.recurrence?.time ?? "23:59");
     setDateError(null);
     setSubtasks(task?.subtasks ?? []);
     setSubtaskInput("");
     setStatus(task?.status ?? "pending");
+  }
+
+  function handleToggleWeekday(day: number) {
+    setDateError(null);
+    setWeekdays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
   }
 
   function handleAddSubtask() {
@@ -135,6 +173,28 @@ export function TaskFormDialog({
         title: title.trim(),
         description: description.trim() ? description.trim() : null,
         dueTime,
+      });
+      setOpen(false);
+      return;
+    }
+
+    if (recurringType) {
+      if (recurringType === "weekly" && weekdays.length === 0) {
+        setDateError("Chọn ít nhất một ngày trong tuần.");
+        return;
+      }
+      setDateError(null);
+
+      onSubmitTask({
+        title: title.trim(),
+        description: description.trim() ? description.trim() : null,
+        startDate,
+        endDate,
+        subtasks: [],
+        recurrence:
+          recurringType === "weekly"
+            ? { type: "weekly", weekdays, time: dueTime }
+            : { type: "monthly", monthDay: Number(monthDay), time: dueTime },
       });
       setOpen(false);
       return;
@@ -211,19 +271,82 @@ export function TaskFormDialog({
           {!task && (
             <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
               <Label htmlFor="task-kind">Loại</Label>
-              <Select value={kind} onValueChange={(value) => setKind(value as "once" | "daily")}>
+              <Select items={KIND_OPTIONS} value={kind} onValueChange={(value) => setKind(value as TaskKind)}>
                 <SelectTrigger id="task-kind">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="once">Chỉ một lần</SelectItem>
-                  <SelectItem value="daily">Hàng ngày</SelectItem>
+                  {KIND_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
           )}
 
-          {isTaskShape ? (
+          {recurringType ? (
+            <>
+              {recurringType === "weekly" ? (
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                  <Label id="task-weekdays-label">Lặp vào (chọn một hoặc nhiều ngày)</Label>
+                  <div role="group" aria-labelledby="task-weekdays-label" className="flex flex-wrap gap-1.5">
+                    {WEEKDAY_OPTIONS.map((option) => {
+                      const selected = weekdays.includes(option.value);
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          aria-pressed={selected}
+                          aria-label={option.label}
+                          title={option.label}
+                          onClick={() => handleToggleWeekday(option.value)}
+                          className={cn(
+                            "h-9 min-w-11 rounded-lg border px-3 text-sm font-medium transition-colors duration-200",
+                            selected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          )}
+                        >
+                          {option.short}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {dateError && <p className="text-xs text-destructive">{dateError}</p>}
+                </div>
+              ) : (
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                  <Label htmlFor="task-month-day">Lặp vào</Label>
+                  <Select items={MONTH_DAY_OPTIONS} value={monthDay} onValueChange={(value) => setMonthDay(value ?? "1")}>
+                    <SelectTrigger id="task-month-day">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {MONTH_DAY_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-slate-400">Tháng nào không có ngày này thì tính vào ngày cuối tháng.</p>
+                </div>
+              )}
+
+              <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                <Label htmlFor="task-recur-time">Hạn chót (giờ)</Label>
+                <Input
+                  id="task-recur-time"
+                  type="time"
+                  value={dueTime}
+                  onChange={(e) => setDueTime(e.target.value)}
+                  required
+                />
+              </div>
+            </>
+          ) : isTaskShape ? (
             <>
               <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
                 <Label htmlFor="task-start-date">Bắt đầu</Label>
@@ -257,7 +380,7 @@ export function TaskFormDialog({
             </div>
           )}
 
-          {isTaskShape && (
+          {isTaskShape && !recurringType && (
             <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
               <Label>Sub-task</Label>
               {subtasks.length > 0 && (

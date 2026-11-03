@@ -128,3 +128,73 @@
     @apply font-sans;
   }
 }
+
+/* GhostMascot: gentle float + occasional blink, skipped for reduced-motion users. */
+@media (prefers-reduced-motion: no-preference) {
+  .ghost-float {
+    animation: ghost-float 4s ease-in-out infinite;
+  }
+  .ghost-blink {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ghost-blink 6s infinite;
+  }
+}
+
+@keyframes ghost-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes ghost-blink {
+  0%,
+  94%,
+  100% {
+    transform: scaleY(1);
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+
+/* GhostMascot: speech bubble pop-in and the shockwave ring on click. */
+.ghost-ring {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ghost-bubble {
+    transform-origin: 85% 100%;
+    animation: ghost-bubble-in 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .ghost-ring {
+    animation: ghost-ring 520ms ease-out;
+  }
+}
+
+@keyframes ghost-bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ghost-ring {
+  from {
+    opacity: 0.7;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}

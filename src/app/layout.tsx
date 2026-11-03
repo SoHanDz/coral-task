@@ -15,6 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CoralTask",
   description: "Quản lý công việc, chống trì hoãn, và theo dõi tiến độ cả năm.",
+  icons: { icon: { url: "/date-svgrepo-com.svg", type: "image/svg+xml" } },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

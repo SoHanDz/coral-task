@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { signIn, signUp } from "@/app/login/actions";
 import { LoginAlerts, LoginNextField } from "@/app/login/LoginDynamic";
+import { GhostMascot } from "@/components/mascot/GhostMascot";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,8 @@ export default function LoginPage({ searchParams }: LoginPageProps) {
           </div>
         </form>
       </div>
+      {/* No QuotesProvider out here, so it just says "Boo!". */}
+      <GhostMascot />
     </div>
   );
 }

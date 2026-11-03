@@ -1,12 +1,13 @@
 "use client";
 
-import { format } from "date-fns";
-import { CheckCircle2, CalendarArrowUp, Loader2 } from "lucide-react";
+import { CheckCircle2, CalendarArrowUp, Loader2, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TaskFormDialog, type TaskFormInput } from "@/components/tasks/TaskFormDialog";
-import { getOverdueDays, isOverdue } from "@/lib/tasks/overdue";
+import { DEADLINE_TONE_CLASS, getDeadlineInfo } from "@/lib/tasks/deadline";
+import { isOverdue } from "@/lib/tasks/overdue";
+import { describeRecurrence } from "@/lib/tasks/recurrence";
 import type { Task, TaskStatus } from "@/lib/tasks/types";
 
 interface TaskDayItemProps {
@@ -31,7 +32,8 @@ export function TaskDayItem({
 }: TaskDayItemProps) {
   const completed = task.status === "completed";
   const overdue = isOverdue(task);
-  const overdueDays = getOverdueDays(task);
+  const deadline = getDeadlineInfo(task);
+  const isRecurring = Boolean(task.recurrence);
   const doneSubtasks = task.subtasks.filter((s) => s.completed).length;
 
   return (
@@ -79,23 +81,27 @@ export function TaskDayItem({
             >
               {task.title}
             </span>
-            {overdue ? (
-              <span className="text-xs font-medium text-destructive">
-                Đến hạn: {format(task.endDate, "dd/MM")} (Trễ {overdueDays} ngày)
-              </span>
-            ) : (
-              task.subtasks.length > 0 && (
-                <span className="text-xs text-slate-400">
-                  {doneSubtasks}/{task.subtasks.length} sub-task
+            <span className={cn("flex max-w-full items-center gap-1.5 text-xs", DEADLINE_TONE_CLASS[deadline.tone])}>
+              {task.recurrence && (
+                <span className="flex shrink-0 items-center gap-1 text-slate-400">
+                  <Repeat className="size-3" />
+                  {describeRecurrence(task.recurrence)} ·
                 </span>
-              )
-            )}
+              )}
+              <span className="truncate">{deadline.label}</span>
+              {task.subtasks.length > 0 && (
+                <span className="shrink-0 text-slate-400">
+                  · {doneSubtasks}/{task.subtasks.length} sub-task
+                </span>
+              )}
+            </span>
           </button>
         }
       />
 
       <div className="flex shrink-0 items-center gap-2">
-        {!overdue && <span className="text-xs text-slate-400">{format(task.endDate, "HH:mm")}</span>}        {overdue && onRescheduleToToday && (
+        {/* A recurring occurrence is pinned to its own day, so "move to today" doesn't apply. */}
+        {overdue && !isRecurring && onRescheduleToToday && (
           <Button
             type="button"
             size="sm"
