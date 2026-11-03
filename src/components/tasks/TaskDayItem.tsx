@@ -60,7 +60,7 @@ export function TaskDayItem({
           <CheckCircle2
             className={cn(
               "size-6 transition-colors duration-200",
-              completed ? "fill-emerald-500 text-white" : "text-slate-300 hover:text-emerald-500"
+              completed ? "fill-primary text-white" : "text-slate-300 hover:text-primary"
             )}
           />
         )}

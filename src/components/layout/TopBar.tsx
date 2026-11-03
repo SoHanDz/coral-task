@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, LogOut, Settings } from "lucide-react";
 import { signOut } from "@/app/login/actions";
 import { QuoteManagerDialog } from "@/components/habits/QuoteManagerDialog";
 import { useQuotes } from "@/components/mascot/QuotesProvider";
@@ -19,6 +20,8 @@ interface TopBarProps {
   /** Omit to render a plain page title instead of the personalized greeting. */
   email?: string | null;
   title?: string;
+  /** Shows a "back" link before the title (only with `title`). */
+  back?: { href: string; label: string };
 }
 
 function getGreeting(now: Date) {
@@ -28,7 +31,7 @@ function getGreeting(now: Date) {
   return "Chào buổi tối";
 }
 
-export function TopBar({ email, title }: TopBarProps) {
+export function TopBar({ email, title, back }: TopBarProps) {
   // Starts null so the initial (and prerendered) render never reads the
   // current time — Next's static prerendering rejects `new Date()` during
   // render. The real clock is filled in after mount, client-side only.
@@ -49,7 +52,18 @@ export function TopBar({ email, title }: TopBarProps) {
   return (
     <header className="flex items-center justify-between gap-3 border-b border-border bg-background px-4 py-4 sm:px-8">
       {title ? (
-        <h1 className="text-xl font-bold text-slate-800">{title}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          {back && (
+            <Link
+              href={back.href}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <ArrowLeft className="size-4" />
+              {back.label}
+            </Link>
+          )}
+          <h1 className="truncate text-xl font-bold text-slate-800">{title}</h1>
+        </div>
       ) : now ? (
         <div>
           <p className="text-xs font-medium capitalize text-slate-500">{format(now, "EEEE", { locale: vi })}</p>
@@ -85,6 +99,14 @@ export function TopBar({ email, title }: TopBarProps) {
             />
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setQuoteManagerOpen(true)}>Quản lý Quote</DropdownMenuItem>
+              <DropdownMenuItem
+                render={
+                  <Link href="/settings" className="flex w-full items-center gap-1.5">
+                    <Settings />
+                    Cấu hình
+                  </Link>
+                }
+              />
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"

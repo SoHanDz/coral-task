@@ -49,38 +49,41 @@
 }
 
 :root {
+  /* Single source of truth for the theme color; overridden per user by <ThemeStyle />. */
+  --brand: #0f766e;
+  --brand-foreground: #ffffff;
   --background: #f1f5f9;
   --foreground: #0f172a;
   --card: #ffffff;
   --card-foreground: #0f172a;
   --popover: #ffffff;
   --popover-foreground: #0f172a;
-  --primary: #0f766e;
-  --primary-foreground: #ffffff;
+  --primary: var(--brand);
+  --primary-foreground: var(--brand-foreground);
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #ccfbf1;
-  --accent-foreground: #134e4a;
+  --accent: color-mix(in oklab, var(--brand) 16%, white);
+  --accent-foreground: color-mix(in oklab, var(--brand) 55%, black);
   --destructive: #ef4444;
   --border: #e2e8f0;
   --input: #e2e8f0;
-  --ring: #0f766e;
+  --ring: var(--brand);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: #0a3331;
-  --sidebar-foreground: #e6fdfa;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #0a3331;
+  --sidebar: color-mix(in oklab, var(--brand) 30%, black);
+  --sidebar-foreground: color-mix(in oklab, var(--brand) 8%, white);
+  --sidebar-primary: color-mix(in oklab, var(--brand) 60%, white);
+  --sidebar-primary-foreground: color-mix(in oklab, var(--brand) 30%, black);
   --sidebar-accent: rgb(255 255 255 / 8%);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 8%);
-  --sidebar-ring: #2dd4bf;
+  --sidebar-ring: color-mix(in oklab, var(--brand) 60%, white);
 }
 
 .dark {
@@ -90,8 +93,8 @@
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: #2dd4bf;
-  --primary-foreground: #042f2e;
+  --primary: color-mix(in oklab, var(--brand) 62%, white);
+  --primary-foreground: color-mix(in oklab, var(--brand) 25%, black);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -101,20 +104,43 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: #2dd4bf;
+  --ring: color-mix(in oklab, var(--brand) 62%, white);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --sidebar: #0a3331;
-  --sidebar-foreground: #e6fdfa;
-  --sidebar-primary: #2dd4bf;
-  --sidebar-primary-foreground: #0a3331;
+  --sidebar: color-mix(in oklab, var(--brand) 30%, black);
+  --sidebar-foreground: color-mix(in oklab, var(--brand) 8%, white);
+  --sidebar-primary: color-mix(in oklab, var(--brand) 60%, white);
+  --sidebar-primary-foreground: color-mix(in oklab, var(--brand) 30%, black);
   --sidebar-accent: rgb(255 255 255 / 8%);
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgb(255 255 255 / 8%);
-  --sidebar-ring: #2dd4bf;
+  --sidebar-ring: color-mix(in oklab, var(--brand) 60%, white);
+}
+
+/* Sidebar styles chosen in settings (default "dark" is the :root / .dark values above). */
+:root[data-sidebar="light"] {
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--brand);
+  --sidebar-primary-foreground: var(--brand-foreground);
+  --sidebar-accent: color-mix(in oklab, var(--brand) 12%, transparent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--brand);
+}
+
+:root[data-sidebar="brand"] {
+  --sidebar: var(--brand);
+  --sidebar-foreground: var(--brand-foreground);
+  --sidebar-primary: var(--brand-foreground);
+  --sidebar-primary-foreground: var(--brand);
+  --sidebar-accent: color-mix(in oklab, var(--brand-foreground) 16%, transparent);
+  --sidebar-accent-foreground: var(--brand-foreground);
+  --sidebar-border: color-mix(in oklab, var(--brand-foreground) 20%, transparent);
+  --sidebar-ring: var(--brand-foreground);
 }
 
 @layer base {

@@ -20,6 +20,11 @@ export async function requireUser() {
   return { supabase, userId: claims.sub };
 }
 
+export async function getCurrentUserId(): Promise<string> {
+  const { userId } = await requireUser();
+  return userId;
+}
+
 export async function getCurrentUserEmail(): Promise<string | null> {
   const { claims } = await getSession();
   return typeof claims?.email === "string" ? claims.email : null;

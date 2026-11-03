@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { NAV_GROUPS } from "@/components/layout/nav-items";
+import { NAV_GROUPS, visibleNavGroups } from "@/components/layout/nav-items";
+import { useSiteSettings } from "@/components/settings/SiteSettingsProvider";
 
 interface SidebarProps {
   profileSlot: ReactNode;
@@ -17,6 +18,8 @@ function isActiveHref(pathname: string, href: string): boolean {
 
 export function Sidebar({ profileSlot }: SidebarProps) {
   const pathname = usePathname();
+  const { settings } = useSiteSettings();
+  const groups = visibleNavGroups(settings?.navHidden ?? []);
   const [openGroups, setOpenGroups] = useState<Set<string>>(
     new Set(
       NAV_GROUPS.filter(
@@ -44,7 +47,7 @@ export function Sidebar({ profileSlot }: SidebarProps) {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-3">
-        {NAV_GROUPS.map((entry) => {
+        {groups.map((entry) => {
           if (!("children" in entry)) {
             const active = isActiveHref(pathname, entry.href);
             const Icon = entry.icon;

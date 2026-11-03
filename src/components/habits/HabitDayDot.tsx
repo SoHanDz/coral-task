@@ -4,10 +4,10 @@ import type { HabitIntensity } from "@/lib/habits/stats";
 
 export const HABIT_LEVEL_STYLES: Record<HabitIntensity, string> = {
   0: "bg-slate-300",
-  1: "bg-emerald-200",
-  2: "bg-emerald-300",
-  3: "bg-emerald-500",
-  4: "bg-emerald-700",
+  1: "bg-primary/25",
+  2: "bg-primary/50",
+  3: "bg-primary/80",
+  4: "bg-primary",
 };
 
 interface HabitDayDotProps {

@@ -107,7 +107,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
 
   return (
     <>
-      <TopBar title="Dựng thói quen" email={email} />
+      <TopBar title="Dựng thói quen" email={email} back={{ href: "/", label: "Todo List" }} />
 
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 p-4 sm:p-8 lg:grid-cols-3">
         <div className="flex flex-col gap-6 lg:col-span-2">
