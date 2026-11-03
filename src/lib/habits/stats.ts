@@ -55,11 +55,16 @@ export function getDayCompletion(habits: Habit[], logs: HabitLog[], date: Date):
   return { total: applicable.length, completed, level: getIntensityLevel(completed, applicable.length) };
 }
 
-/** Consecutive completed days ending today (0 if today itself isn't completed). */
+/**
+ * Consecutive completed days ending today. Today not being ticked *yet* doesn't
+ * break the streak (the day isn't over), so the count then ends yesterday; the
+ * streak only resets once a full day has been missed. This also means ticking a
+ * forgotten day afterwards ("backfilling") reconnects the chain.
+ */
 export function getCurrentStreak(habitId: string, logs: HabitLog[], today: Date): number {
   const byDate = logsByDate(logs, habitId);
   let streak = 0;
-  let cursor = today;
+  let cursor = byDate.get(toDateKey(today)) === true ? today : subDays(today, 1);
 
   while (byDate.get(toDateKey(cursor)) === true) {
     streak += 1;
@@ -93,14 +98,19 @@ export function getBestStreak(habitId: string, logs: HabitLog[]): number {
   return best;
 }
 
-/** Longest consecutive not-completed run between the day after createdAt and today. */
+/**
+ * Longest consecutive not-completed run between the day after createdAt and
+ * today. Today only counts once it's ticked: an untouched today isn't missed
+ * yet, so it must not show up as a 1-day break.
+ */
 export function getLongestBreak(habitId: string, logs: HabitLog[], createdAt: Date, today: Date = new Date()): number {
   const byDate = logsByDate(logs, habitId);
   let longest = 0;
   let current = 0;
   let cursor = addDays(parseISO(toDateKey(createdAt)), 1);
+  const lastDayKey = toDateKey(byDate.get(toDateKey(today)) === true ? today : subDays(today, 1));
 
-  while (toDateKey(cursor) <= toDateKey(today)) {
+  while (toDateKey(cursor) <= lastDayKey) {
     const completed = byDate.get(toDateKey(cursor)) === true;
     current = completed ? 0 : current + 1;
     longest = Math.max(longest, current);
