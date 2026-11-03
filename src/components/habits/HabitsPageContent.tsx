@@ -18,9 +18,8 @@ import { toDateKey } from "@/lib/date/date-key";
 import {
   getCurrentStreak,
   getHabitsForDate,
-  getRecordHolderId,
   rankByFrequency,
-  withRecordHolderFirst,
+  sortHabitsByStreak,
 } from "@/lib/habits/stats";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
@@ -106,8 +105,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
   // Same habit set the calendar grid counts for this day, so the checklist,
   // the progress bar and the grid tooltip always agree.
-  const recordHolderId = getRecordHolderId(habits, optimisticLogs);
-  const dayHabits = withRecordHolderFirst(getHabitsForDate(habits, optimisticLogs, selectedDate), recordHolderId);
+  const dayHabits = sortHabitsByStreak(getHabitsForDate(habits, optimisticLogs, selectedDate), optimisticLogs, new Date());
 
   const completedOnDay = dayHabits.filter((h) => selectedLogsByHabitId.get(h.id)?.completed).length;
   const completionPercent = dayHabits.length > 0 ? Math.round((completedOnDay / dayHabits.length) * 100) : 0;
@@ -208,7 +206,6 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                         pending={pendingHabitIds.has(habit.id)}
                         onRowClick={(h) => setSelectedHabitId(h.id)}
                         streak={getCurrentStreak(habit.id, optimisticLogs, new Date())}
-                        isRecord={habit.id === recordHolderId}
                       />
                     ))}
                   </ul>

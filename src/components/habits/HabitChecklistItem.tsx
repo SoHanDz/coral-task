@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, Flame, Loader2 } from "lucide-react";
+import { Flame, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { Habit, HabitLog } from "@/lib/habits/types";
@@ -15,8 +15,6 @@ interface HabitChecklistItemProps {
   onRowClick?: (habit: Habit) => void;
   /** Current streak in days. Renders a 🔥 badge when >= 1; omit to hide it. */
   streak?: number;
-  /** True for the habit holding the longest streak ever; shows a crown. */
-  isRecord?: boolean;
 }
 
 /**
@@ -31,7 +29,6 @@ export function HabitChecklistItem({
   pending = false,
   onRowClick,
   streak,
-  isRecord = false,
 }: HabitChecklistItemProps) {
   const completed = log?.completed ?? false;
 
@@ -63,15 +60,6 @@ export function HabitChecklistItem({
       >
         {habit.title}
       </span>
-      {isRecord && (
-        <span
-          title="Đang giữ kỷ lục chuỗi dài nhất"
-          className="flex shrink-0 items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-600"
-        >
-          <Crown className="size-3.5 fill-amber-400 text-amber-500" />
-          Kỷ lục
-        </span>
-      )}
       {!!streak && streak >= 1 && (
         <span className="flex shrink-0 items-center gap-1 rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-500">
           <Flame className="size-3.5 fill-orange-400 text-orange-500" />

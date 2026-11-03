@@ -14,7 +14,7 @@ import { HabitChecklistItem } from "@/components/habits/HabitChecklistItem";
 import { HabitDetailDialog } from "@/components/habits/HabitDetailDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toDateKey } from "@/lib/date/date-key";
-import { getRecordHolderId, withRecordHolderFirst } from "@/lib/habits/stats";
+import { sortHabitsByStreak } from "@/lib/habits/stats";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 import {
   getVisibleOccurrences,
@@ -311,7 +311,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
     optimisticHabitLogs.filter((log) => log.logDate === selectedKey).map((log) => [log.habitId, log])
   );
   const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
-  const recordHolderId = getRecordHolderId(habits, optimisticHabitLogs);
+  const sortedHabits = sortHabitsByStreak(habits, optimisticHabitLogs, new Date());
 
   return (
     <div className="flex flex-col gap-6">
@@ -362,7 +362,7 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
             <p className="text-sm text-slate-500">Chưa có thói quen nào.</p>
           ) : (
             <ul className="flex flex-col gap-2">
-              {withRecordHolderFirst(habits, recordHolderId).map((habit) => (
+              {sortedHabits.map((habit) => (
                 <HabitChecklistItem
                   key={habit.id}
                   habit={habit}
@@ -370,7 +370,6 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
                   onToggle={handleToggleHabitLog}
                   pending={pendingHabitIds.has(habit.id)}
                   onRowClick={(h) => setSelectedHabitId(h.id)}
-                  isRecord={habit.id === recordHolderId}
                 />
               ))}
             </ul>
