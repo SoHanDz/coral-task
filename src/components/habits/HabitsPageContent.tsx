@@ -15,7 +15,13 @@ import { TopBar } from "@/components/layout/TopBar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DatePicker } from "@/components/ui/date-picker";
 import { toDateKey } from "@/lib/date/date-key";
-import { getCurrentStreak, getHabitsForDate, rankByFrequency } from "@/lib/habits/stats";
+import {
+  getCurrentStreak,
+  getHabitsForDate,
+  getRecordHolderId,
+  rankByFrequency,
+  withRecordHolderFirst,
+} from "@/lib/habits/stats";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 
 interface HabitsPageContentProps {
@@ -100,7 +106,8 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
   const selectedHabit = habits.find((h) => h.id === selectedHabitId) ?? null;
   // Same habit set the calendar grid counts for this day, so the checklist,
   // the progress bar and the grid tooltip always agree.
-  const dayHabits = getHabitsForDate(habits, optimisticLogs, selectedDate);
+  const recordHolderId = getRecordHolderId(habits, optimisticLogs);
+  const dayHabits = withRecordHolderFirst(getHabitsForDate(habits, optimisticLogs, selectedDate), recordHolderId);
 
   const completedOnDay = dayHabits.filter((h) => selectedLogsByHabitId.get(h.id)?.completed).length;
   const completionPercent = dayHabits.length > 0 ? Math.round((completedOnDay / dayHabits.length) * 100) : 0;
@@ -201,6 +208,7 @@ export function HabitsPageContent({ habits, habitLogs, email }: HabitsPageConten
                         pending={pendingHabitIds.has(habit.id)}
                         onRowClick={(h) => setSelectedHabitId(h.id)}
                         streak={getCurrentStreak(habit.id, optimisticLogs, new Date())}
+                        isRecord={habit.id === recordHolderId}
                       />
                     ))}
                   </ul>

@@ -98,6 +98,54 @@ export function getBestStreak(habitId: string, logs: HabitLog[]): number {
   return best;
 }
 
+/** Shortest record worth a crown; a 1-day "streak" isn't one. */
+const MIN_RECORD_STREAK = 2;
+
+/**
+ * The habit holding the all-time longest streak, or null if nobody has one
+ * worth showing. A record holds until another habit goes strictly past it:
+ * on a tie the habit that reached that length first keeps the crown, and it
+ * stays crowned even after its own current streak breaks.
+ */
+export function getRecordHolderId(habits: Habit[], logs: HabitLog[]): string | null {
+  let holder: { id: string; length: number; reachedOn: string } | null = null;
+
+  for (const habit of habits) {
+    const dates = logs
+      .filter((log) => log.habitId === habit.id && log.completed)
+      .map((log) => log.logDate)
+      .sort();
+
+    let run = 0;
+    let previousKey: string | null = null;
+    let best = 0;
+    let reachedOn = "";
+    for (const dateKey of dates) {
+      run = previousKey !== null && toDateKey(addDays(parseISO(previousKey), 1)) === dateKey ? run + 1 : 1;
+      // Strictly greater: the day the habit first got this long is when it set the mark.
+      if (run > best) {
+        best = run;
+        reachedOn = dateKey;
+      }
+      previousKey = dateKey;
+    }
+
+    if (best < MIN_RECORD_STREAK) continue;
+    if (!holder || best > holder.length || (best === holder.length && reachedOn < holder.reachedOn)) {
+      holder = { id: habit.id, length: best, reachedOn };
+    }
+  }
+
+  return holder?.id ?? null;
+}
+
+/** Moves the record holder to the front; everyone else keeps their relative order. */
+export function withRecordHolderFirst<T extends { id: string }>(habits: T[], recordHolderId: string | null): T[] {
+  if (!recordHolderId) return habits;
+  const holder = habits.find((h) => h.id === recordHolderId);
+  return holder ? [holder, ...habits.filter((h) => h.id !== recordHolderId)] : habits;
+}
+
 /**
  * Longest consecutive not-completed run between the day after createdAt and
  * today. Today only counts once it's ticked: an untouched today isn't missed
