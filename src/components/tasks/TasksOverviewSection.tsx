@@ -6,6 +6,12 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { endOfDay, startOfDay } from "date-fns";
 import { createTask, deleteTask, rescheduleTaskToToday, updateTask, updateTaskStatus } from "@/app/actions/tasks";
+import {
+  createRecurringTask,
+  deleteRecurringTask,
+  setOccurrenceStatus,
+  updateRecurringTask,
+} from "@/app/actions/recurring-tasks";
 import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
 import { Button } from "@/components/ui/button";
 import { TaskDayItem } from "@/components/tasks/TaskDayItem";
@@ -23,13 +29,45 @@ import {
   type OccurrenceCompletions,
   type RecurringTask,
 } from "@/lib/tasks/recurrence";
-import type { Task, TaskStatus } from "@/lib/tasks/types";
+import type { Task, TaskRecurrence, TaskStatus } from "@/lib/tasks/types";
 
 interface TasksOverviewSectionProps {
   tasks: Task[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  recurringTasks: RecurringTask[];
+  occurrenceCompletions: OccurrenceCompletions;
   selectedDate: Date;
+}
+
+type RecurringAction =
+  | { type: "create"; template: RecurringTask }
+  | { type: "edit"; id: string; title: string; description: string | null; recurrence?: TaskRecurrence }
+  | { type: "delete"; id: string };
+
+function applyRecurringAction(state: RecurringTask[], action: RecurringAction): RecurringTask[] {
+  switch (action.type) {
+    case "create":
+      return [...state, action.template];
+    case "edit":
+      return state.map((t) =>
+        t.id === action.id
+          ? { ...t, title: action.title, description: action.description, recurrence: action.recurrence ?? t.recurrence }
+          : t
+      );
+    case "delete":
+      return state.filter((t) => t.id !== action.id);
+  }
+}
+
+type CompletionAction = { key: string; completed: boolean } | { deleteTemplateId: string };
+
+function applyCompletionAction(state: OccurrenceCompletions, action: CompletionAction): OccurrenceCompletions {
+  if ("deleteTemplateId" in action) {
+    return Object.fromEntries(Object.entries(state).filter(([key]) => templateIdOf(key) !== action.deleteTemplateId));
+  }
+  if (!action.completed) return Object.fromEntries(Object.entries(state).filter(([key]) => key !== action.key));
+  return { ...state, [action.key]: new Date() };
 }
 
 type OptimisticAction =
@@ -92,7 +130,14 @@ function isTaskOnDay(task: Task, dayKey: string): boolean {
   return toDateKey(task.startDate) <= dayKey && dayKey <= toDateKey(task.endDate);
 }
 
-export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }: TasksOverviewSectionProps) {
+export function TasksOverviewSection({
+  tasks,
+  habits,
+  habitLogs,
+  recurringTasks: serverRecurringTasks,
+  occurrenceCompletions: serverCompletions,
+  selectedDate,
+}: TasksOverviewSectionProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
   // Local state updates immediately on every action; it reconciles with the
@@ -106,11 +151,8 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   const [pendingTaskIds, setPendingTaskIds] = useState<Set<string>>(new Set());
   const [pendingHabitIds, setPendingHabitIds] = useState<Set<string>>(new Set());
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
-  // TODO(api): weekly/monthly tasks live only in client state until the backend
-  // has a recurrence column + a per-occurrence completion table. Both shapes
-  // below map 1:1 onto that (template row + (template_id, date) completion row).
-  const [recurringTasks, setRecurringTasks] = useState<RecurringTask[]>([]);
-  const [occurrenceCompletions, setOccurrenceCompletions] = useState<OccurrenceCompletions>({});
+  const [recurringTasks, applyRecurring] = useOptimistic(serverRecurringTasks, applyRecurringAction);
+  const [occurrenceCompletions, applyCompletion] = useOptimistic(serverCompletions, applyCompletionAction);
 
   function withTaskPending(id: string, fn: () => Promise<void>) {
     setPendingTaskIds((prev) => new Set(prev).add(id));
@@ -151,7 +193,16 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
         recurrence: input.recurrence,
         createdAt: new Date(),
       };
-      setRecurringTasks((prev) => [...prev, template]);
+      startTransition(async () => {
+        applyRecurring({ type: "create", template });
+        await createRecurringTask({
+          id: template.id,
+          title: template.title,
+          description: template.description,
+          recurrence: template.recurrence,
+        });
+        router.refresh();
+      });
       return;
     }
 
@@ -184,18 +235,19 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
     // Editing any occurrence edits the shared weekly/monthly definition.
     if (isOccurrenceId(id)) {
       const templateId = templateIdOf(id);
-      setRecurringTasks((prev) =>
-        prev.map((template) =>
-          template.id === templateId
-            ? {
-                ...template,
-                title: input.title,
-                description: input.description,
-                recurrence: input.recurrence ?? template.recurrence,
-              }
-            : template
-        )
-      );
+      const recurrence = input.recurrence ?? recurringTasks.find((t) => t.id === templateId)?.recurrence;
+      if (!recurrence) return;
+      startTransition(async () => {
+        applyRecurring({
+          type: "edit",
+          id: templateId,
+          title: input.title,
+          description: input.description,
+          recurrence,
+        });
+        await updateRecurringTask(templateId, { title: input.title, description: input.description, recurrence });
+        router.refresh();
+      });
       return;
     }
 
@@ -210,9 +262,12 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
     // An occurrence is only ever flagged done/undone under its own
     // `template::date` key - nothing is created, so an overdue one can't duplicate.
     if (isOccurrenceId(id)) {
-      setOccurrenceCompletions((prev) => {
-        if (prev[id]) return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== id));
-        return { ...prev, [id]: new Date() };
+      const completed = !occurrenceCompletions[id];
+      const [templateId, date] = id.split("::");
+      withTaskPending(id, async () => {
+        applyCompletion({ key: id, completed });
+        await setOccurrenceStatus(templateId, date, completed);
+        router.refresh();
       });
       return;
     }
@@ -240,10 +295,12 @@ export function TasksOverviewSection({ tasks, habits, habitLogs, selectedDate }:
   function handleDelete(id: string) {
     if (isOccurrenceId(id)) {
       const templateId = templateIdOf(id);
-      setRecurringTasks((prev) => prev.filter((template) => template.id !== templateId));
-      setOccurrenceCompletions((prev) =>
-        Object.fromEntries(Object.entries(prev).filter(([key]) => templateIdOf(key) !== templateId))
-      );
+      startTransition(async () => {
+        applyRecurring({ type: "delete", id: templateId });
+        applyCompletion({ deleteTemplateId: templateId });
+        await deleteRecurringTask(templateId);
+        router.refresh();
+      });
       return;
     }
 

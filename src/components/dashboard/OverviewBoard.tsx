@@ -7,6 +7,7 @@ import { EventsListSection } from "@/components/events/EventsListSection";
 import { Card, CardContent } from "@/components/ui/card";
 import type { EventItem } from "@/lib/events/types";
 import type { Habit, HabitLog } from "@/lib/habits/types";
+import type { OccurrenceCompletions, RecurringTask } from "@/lib/tasks/recurrence";
 import type { Task } from "@/lib/tasks/types";
 
 interface OverviewBoardProps {
@@ -14,15 +15,31 @@ interface OverviewBoardProps {
   habits: Habit[];
   habitLogs: HabitLog[];
   events: EventItem[];
+  recurringTasks: RecurringTask[];
+  occurrenceCompletions: OccurrenceCompletions;
 }
 
-export function OverviewBoard({ tasks, habits, habitLogs, events }: OverviewBoardProps) {
+export function OverviewBoard({
+  tasks,
+  habits,
+  habitLogs,
+  events,
+  recurringTasks,
+  occurrenceCompletions,
+}: OverviewBoardProps) {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
       <div className="flex flex-col gap-8 lg:col-span-2">
-        <TasksOverviewSection tasks={tasks} habits={habits} habitLogs={habitLogs} selectedDate={selectedDate} />
+        <TasksOverviewSection
+          tasks={tasks}
+          habits={habits}
+          habitLogs={habitLogs}
+          recurringTasks={recurringTasks}
+          occurrenceCompletions={occurrenceCompletions}
+          selectedDate={selectedDate}
+        />
       </div>
 
       <div className="flex flex-col gap-8 lg:sticky lg:top-8">

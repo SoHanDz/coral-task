@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getTasks } from "@/app/actions/tasks";
+import { getRecurringCompletions, getRecurringTasks } from "@/app/actions/recurring-tasks";
 import { getHabits, getHabitLogs } from "@/app/actions/habits";
 import { getEvents } from "@/app/actions/events";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
@@ -8,12 +9,14 @@ import { TopBar } from "@/components/layout/TopBar";
 
 export async function OverviewContent() {
   await connection();
-  const [tasks, habits, habitLogs, events, email] = await Promise.all([
+  const [tasks, habits, habitLogs, events, email, recurringTasks, occurrenceCompletions] = await Promise.all([
     getTasks(),
     getHabits(),
     getHabitLogs(),
     getEvents(),
     getCurrentUserEmail(),
+    getRecurringTasks(),
+    getRecurringCompletions(),
   ]);
 
   return (
@@ -21,7 +24,14 @@ export async function OverviewContent() {
       <TopBar email={email} />
 
       <div className="mx-auto max-w-6xl p-4 sm:p-8">
-        <OverviewBoard tasks={tasks} habits={habits} habitLogs={habitLogs} events={events} />
+        <OverviewBoard
+          tasks={tasks}
+          habits={habits}
+          habitLogs={habitLogs}
+          events={events}
+          recurringTasks={recurringTasks}
+          occurrenceCompletions={occurrenceCompletions}
+        />
       </div>
     </div>
   );
