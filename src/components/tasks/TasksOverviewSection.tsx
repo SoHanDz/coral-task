@@ -1,6 +1,7 @@
 "use client";
 
-import { useOptimistic, useState, useTransition } from "react";
+import { useOptimistic, useRef, useState, useTransition } from "react";
+import { Reorder } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
@@ -12,6 +13,7 @@ import {
   setOccurrenceStatus,
   updateRecurringTask,
 } from "@/app/actions/recurring-tasks";
+import { saveTaskDayOrder } from "@/app/actions/task-orders";
 import { createHabit, deleteHabit, setHabitLogStatus, updateHabit } from "@/app/actions/habits";
 import { Button } from "@/components/ui/button";
 import { TaskDayItem } from "@/components/tasks/TaskDayItem";
@@ -29,6 +31,7 @@ import {
   type OccurrenceCompletions,
   type RecurringTask,
 } from "@/lib/tasks/recurrence";
+import { orderDayTasks, type TaskDayOrders } from "@/lib/tasks/order";
 import type { Task, TaskRecurrence, TaskStatus } from "@/lib/tasks/types";
 
 interface TasksOverviewSectionProps {
@@ -38,6 +41,7 @@ interface TasksOverviewSectionProps {
   recurringTasks: RecurringTask[];
   occurrenceCompletions: OccurrenceCompletions;
   selectedDate: Date;
+  taskDayOrders: TaskDayOrders;
 }
 
 type RecurringAction =
@@ -137,6 +141,7 @@ export function TasksOverviewSection({
   recurringTasks: serverRecurringTasks,
   occurrenceCompletions: serverCompletions,
   selectedDate,
+  taskDayOrders,
 }: TasksOverviewSectionProps) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -153,6 +158,12 @@ export function TasksOverviewSection({
   const [selectedHabitId, setSelectedHabitId] = useState<string | null>(null);
   const [recurringTasks, applyRecurring] = useOptimistic(serverRecurringTasks, applyRecurringAction);
   const [occurrenceCompletions, applyCompletion] = useOptimistic(serverCompletions, applyCompletionAction);
+  // Drag order is local-first: it is the source of truth after mount and is
+  // saved in the background, so a drop never waits on the network.
+  const [localOrders, setLocalOrders] = useState(taskDayOrders);
+  // Pending ids in live drag order, only while a drag is in progress.
+  const [dragIds, setDragIds] = useState<string[] | null>(null);
+  const dragIdsRef = useRef<string[] | null>(null);
 
   function withTaskPending(id: string, fn: () => Promise<void>) {
     setPendingTaskIds((prev) => new Set(prev).add(id));
@@ -356,13 +367,61 @@ export function TasksOverviewSection({
   );
   const dayTasks = [...oneTimeTasks, ...getVisibleOccurrences(recurringTasks, occurrenceCompletions, selectedDate)];
 
-  // Pending first, nearest deadline on top (overdue ones have the earliest, so
-  // they naturally lead); finished tasks sink to the bottom in the same order.
-  const byDeadline = (a: Task, b: Task) => a.endDate.getTime() - b.endDate.getTime();
-  const orderedDayTasks = [
-    ...dayTasks.filter((task) => task.status === "pending").sort(byDeadline),
-    ...dayTasks.filter((task) => task.status === "completed").sort(byDeadline),
-  ];
+  // Pending first in the user's dragged order (undragged ones by nearest
+  // deadline); finished tasks sink to the bottom.
+  const orderedDayTasks = orderDayTasks(dayTasks, localOrders[selectedKey]);
+  const pendingDayTasks = orderedDayTasks.filter((task) => task.status === "pending");
+  const completedDayTasks = orderedDayTasks.filter((task) => task.status === "completed");
+  const pendingById = new Map(pendingDayTasks.map((task) => [task.id, task]));
+  const visiblePendingTasks = dragIds ? dragIds.flatMap((id) => pendingById.get(id) ?? []) : pendingDayTasks;
+
+  function handleReorder(ids: string[]) {
+    dragIdsRef.current = ids;
+    setDragIds(ids);
+  }
+
+  function handleSortEnd() {
+    const ids = dragIdsRef.current;
+    dragIdsRef.current = null;
+    setDragIds(null);
+    if (!ids) return;
+
+    const day = selectedKey;
+    const previous = localOrders[day];
+    // Completed ids are kept too, so un-ticking a task restores its place.
+    const next = [...ids, ...completedDayTasks.map((task) => task.id)];
+    if (previous && previous.join() === next.join()) return;
+
+    setLocalOrders((prev) => ({ ...prev, [day]: next }));
+    startTransition(async () => {
+      try {
+        await saveTaskDayOrder(day, next);
+      } catch {
+        setLocalOrders((prev) => {
+          const rest = { ...prev };
+          delete rest[day];
+          return previous ? { ...rest, [day]: previous } : rest;
+        });
+      }
+    });
+  }
+
+  function renderTask(task: Task, sortable: boolean) {
+    return (
+      <TaskDayItem
+        key={task.id}
+        task={task}
+        onToggleStatus={handleToggleStatus}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onRescheduleToToday={handleRescheduleToToday}
+        onStatusChange={handleStatusChange}
+        pending={pendingTaskIds.has(task.id)}
+        sortable={sortable}
+        onSortEnd={handleSortEnd}
+      />
+    );
+  }
 
   const habitLogsByHabitId = new Map(
     optimisticHabitLogs.filter((log) => log.logDate === selectedKey).map((log) => [log.habitId, log])
@@ -377,6 +436,7 @@ export function TasksOverviewSection({
           <CardTitle className="text-lg font-semibold text-slate-700">Công việc cần làm</CardTitle>
           <TaskFormDialog
             trigger={<Button type="button">+ Thêm công việc</Button>}
+            defaultDate={selectedDate}
             onSubmitTask={handleCreate}
             onSubmitHabit={handleCreateHabit}
           />
@@ -385,52 +445,50 @@ export function TasksOverviewSection({
           {orderedDayTasks.length === 0 ? (
             <p className="text-sm text-slate-500">Không có việc nào vào ngày này.</p>
           ) : (
-            <ul className="flex flex-col gap-2">
-              {orderedDayTasks.map((task) => (
-                <TaskDayItem
-                  key={task.id}
-                  task={task}
-                  onToggleStatus={handleToggleStatus}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  onRescheduleToToday={handleRescheduleToToday}
-                  onStatusChange={handleStatusChange}
-                  pending={pendingTaskIds.has(task.id)}
-                />
-              ))}
-            </ul>
+            <div className="flex flex-col gap-2">
+              <Reorder.Group
+                as="ul"
+                axis="y"
+                values={visiblePendingTasks.map((task) => task.id)}
+                onReorder={handleReorder}
+                className="flex flex-col gap-2"
+              >
+                {visiblePendingTasks.map((task) => renderTask(task, true))}
+              </Reorder.Group>
+              {completedDayTasks.length > 0 && (
+                <ul className="flex flex-col gap-2">{completedDayTasks.map((task) => renderTask(task, false))}</ul>
+              )}
+            </div>
           )}
-        </CardContent>
-      </Card>
 
-      <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-        <CardHeader className="flex flex-row items-center justify-between px-4 pt-6 sm:px-8 sm:pt-8">
-          <CardTitle className="text-lg font-semibold text-slate-700">Thói quen hàng ngày</CardTitle>
-          <Link
-            href="/habits"
-            className="flex items-center gap-1 text-sm font-medium text-primary transition-colors duration-200 hover:underline"
-          >
-            Xem chi tiết
-            <ArrowRight className="size-4" />
-          </Link>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-6 px-4 pb-6 sm:px-8 sm:pb-8">
-          {habits.length === 0 ? (
-            <p className="text-sm text-slate-500">Chưa có thói quen nào.</p>
-          ) : (
-            <ul className="flex flex-col gap-2">
-              {sortedHabits.map((habit) => (
-                <HabitChecklistItem
-                  key={habit.id}
-                  habit={habit}
-                  log={habitLogsByHabitId.get(habit.id)}
-                  onToggle={handleToggleHabitLog}
-                  pending={pendingHabitIds.has(habit.id)}
-                  onRowClick={(h) => setSelectedHabitId(h.id)}
-                />
-              ))}
-            </ul>
-          )}
+          <section className="flex flex-col gap-3 border-t border-slate-200/80 pt-5" aria-label="Thói quen hàng ngày">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-600">Thói quen hàng ngày</h3>
+              <Link
+                href="/habits"
+                className="flex items-center gap-1 text-xs font-medium text-primary transition-colors duration-200 hover:underline"
+              >
+                Xem chi tiết
+                <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+            {habits.length === 0 ? (
+              <p className="text-sm text-slate-500">Chưa có thói quen nào.</p>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {sortedHabits.map((habit) => (
+                  <HabitChecklistItem
+                    key={habit.id}
+                    habit={habit}
+                    log={habitLogsByHabitId.get(habit.id)}
+                    onToggle={handleToggleHabitLog}
+                    pending={pendingHabitIds.has(habit.id)}
+                    onRowClick={(h) => setSelectedHabitId(h.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
         </CardContent>
       </Card>
 

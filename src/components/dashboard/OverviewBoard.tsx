@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { EventItem } from "@/lib/events/types";
 import type { Habit, HabitLog } from "@/lib/habits/types";
 import type { OccurrenceCompletions, RecurringTask } from "@/lib/tasks/recurrence";
+import type { TaskDayOrders } from "@/lib/tasks/order";
 import type { Task } from "@/lib/tasks/types";
 
 interface OverviewBoardProps {
@@ -17,6 +18,7 @@ interface OverviewBoardProps {
   events: EventItem[];
   recurringTasks: RecurringTask[];
   occurrenceCompletions: OccurrenceCompletions;
+  taskDayOrders: TaskDayOrders;
 }
 
 export function OverviewBoard({
@@ -26,6 +28,7 @@ export function OverviewBoard({
   events,
   recurringTasks,
   occurrenceCompletions,
+  taskDayOrders,
 }: OverviewBoardProps) {
   const [selectedDate, setSelectedDate] = useState(() => new Date());
 
@@ -38,6 +41,7 @@ export function OverviewBoard({
           habitLogs={habitLogs}
           recurringTasks={recurringTasks}
           occurrenceCompletions={occurrenceCompletions}
+          taskDayOrders={taskDayOrders}
           selectedDate={selectedDate}
         />
       </div>

@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { getTasks } from "@/app/actions/tasks";
 import { getRecurringCompletions, getRecurringTasks } from "@/app/actions/recurring-tasks";
 import { getHabits, getHabitLogs } from "@/app/actions/habits";
+import { getTaskDayOrders } from "@/app/actions/task-orders";
 import { getEvents } from "@/app/actions/events";
 import { getCurrentUserEmail } from "@/lib/supabase/require-user";
 import { OverviewBoard } from "@/components/dashboard/OverviewBoard";
@@ -9,7 +10,7 @@ import { TopBar } from "@/components/layout/TopBar";
 
 export async function OverviewContent() {
   await connection();
-  const [tasks, habits, habitLogs, events, email, recurringTasks, occurrenceCompletions] = await Promise.all([
+  const [tasks, habits, habitLogs, events, email, recurringTasks, occurrenceCompletions, taskDayOrders] = await Promise.all([
     getTasks(),
     getHabits(),
     getHabitLogs(),
@@ -17,6 +18,7 @@ export async function OverviewContent() {
     getCurrentUserEmail(),
     getRecurringTasks(),
     getRecurringCompletions(),
+    getTaskDayOrders(),
   ]);
 
   return (
@@ -31,6 +33,7 @@ export async function OverviewContent() {
           events={events}
           recurringTasks={recurringTasks}
           occurrenceCompletions={occurrenceCompletions}
+          taskDayOrders={taskDayOrders}
         />
       </div>
     </div>

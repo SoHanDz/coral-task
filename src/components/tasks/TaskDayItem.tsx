@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, CalendarArrowUp, Loader2, Repeat } from "lucide-react";
+import { Reorder, useDragControls } from "framer-motion";
+import { CheckCircle2, CalendarArrowUp, GripVertical, Loader2, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,9 @@ interface TaskDayItemProps {
   onStatusChange?: (id: string, status: TaskStatus) => void;
   /** True while a status/reschedule mutation for this task is in flight. */
   pending?: boolean;
+  /** Render as a drag-sortable row; must sit inside a `Reorder.Group`. */
+  sortable?: boolean;
+  onSortEnd?: () => void;
 }
 
 export function TaskDayItem({
@@ -29,24 +33,38 @@ export function TaskDayItem({
   onRescheduleToToday,
   onStatusChange,
   pending = false,
+  sortable = false,
+  onSortEnd,
 }: TaskDayItemProps) {
+  const dragControls = useDragControls();
   const completed = task.status === "completed";
   const overdue = isOverdue(task);
   const deadline = getDeadlineInfo(task);
   const isRecurring = Boolean(task.recurrence);
   const doneSubtasks = task.subtasks.filter((s) => s.completed).length;
 
-  return (
-    <li
-      className={cn(
-        "flex items-center gap-3 rounded-lg border p-3 transition-colors duration-200",
-        completed
-          ? "border-slate-200/60 bg-slate-50"
-          : overdue
-            ? "border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
-            : "border-slate-200/80 bg-white hover:bg-slate-50"
+  const rowClassName = cn(
+    "flex items-center gap-3 rounded-lg border p-3 transition-colors duration-200",
+    completed
+      ? "border-slate-200/60 bg-slate-50"
+      : overdue
+        ? "border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
+        : "border-slate-200/80 bg-white hover:bg-slate-50"
+  );
+
+  const row = (
+    <>
+      {sortable && (
+        <button
+          type="button"
+          aria-label="Kéo để đổi thứ tự"
+          title="Kéo để đổi thứ tự"
+          onPointerDown={(e) => dragControls.start(e)}
+          className="-ml-1 shrink-0 cursor-grab touch-none text-slate-300 transition-colors duration-200 hover:text-slate-500 active:cursor-grabbing"
+        >
+          <GripVertical className="size-5" />
+        </button>
       )}
-    >
       <button
         type="button"
         onClick={() => onToggleStatus(task.id)}
@@ -119,6 +137,21 @@ export function TaskDayItem({
         {/* On mobile the red "Trễ N ngày" subtitle already says this. */}
         {overdue && <Badge className="hidden border-none bg-destructive text-white sm:inline-flex">Trễ hạn</Badge>}
       </div>
-    </li>
+    </>
+  );
+
+  if (!sortable) return <li className={rowClassName}>{row}</li>;
+
+  return (
+    <Reorder.Item
+      value={task.id}
+      dragListener={false}
+      dragControls={dragControls}
+      onDragEnd={onSortEnd}
+      className={cn(rowClassName, "relative")}
+      whileDrag={{ scale: 1.01, boxShadow: "0 8px 24px rgba(15, 23, 42, 0.12)", zIndex: 10 }}
+    >
+      {row}
+    </Reorder.Item>
   );
 }

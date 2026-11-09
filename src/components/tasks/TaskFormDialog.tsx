@@ -1,9 +1,10 @@
 "use client";
 
-import { endOfDay, format, startOfToday } from "date-fns";
+import { endOfDay, format, isSameDay, startOfDay } from "date-fns";
 import { useState, type FormEvent, type ReactElement } from "react";
 import { PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   Dialog,
@@ -78,14 +79,22 @@ interface TaskFormDialogProps {
   onDelete?: (id: string) => void;
   /** Called the instant checking/unchecking a subtask flips the parent task's completion. */
   onStatusChange?: (id: string, status: TaskStatus) => void;
+  /** Day a new task is created for (the day being viewed). Defaults to today. */
+  defaultDate?: Date;
 }
 
-function defaultStartDate(): Date {
-  return new Date();
+/** Start of a one-day task: "now" for today (as before), 00:00 for any other day. */
+function dayStart(day: Date): Date {
+  return isSameDay(day, new Date()) ? new Date() : startOfDay(day);
 }
 
-function defaultEndDate(): Date {
-  return endOfDay(startOfToday());
+function dayEnd(day: Date): Date {
+  return endOfDay(day);
+}
+
+/** A task that sits inside one calendar day and runs to its end can be edited with a single date. */
+function isSingleDayWindow(start: Date, end: Date): boolean {
+  return isSameDay(start, end) && end.getHours() === 23 && end.getMinutes() === 59;
 }
 
 export function TaskFormDialog({
@@ -95,6 +104,7 @@ export function TaskFormDialog({
   onSubmitHabit,
   onDelete,
   onStatusChange,
+  defaultDate,
 }: TaskFormDialogProps) {
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<TaskKind>("once");
@@ -102,8 +112,11 @@ export function TaskFormDialog({
   const [monthDay, setMonthDay] = useState("1");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date>(defaultStartDate());
-  const [endDate, setEndDate] = useState<Date>(defaultEndDate());
+  const [startDate, setStartDate] = useState<Date>(() => dayStart(defaultDate ?? new Date()));
+  const [endDate, setEndDate] = useState<Date>(() => dayEnd(defaultDate ?? new Date()));
+  // Most tasks are "do it on day X": one date picker, with the start/end
+  // window (and exact hours) tucked behind a toggle.
+  const [detailedDates, setDetailedDates] = useState(false);
   const [dueTime, setDueTime] = useState("23:59");
   const [dateError, setDateError] = useState<string | null>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
@@ -120,8 +133,10 @@ export function TaskFormDialog({
     setKind("once");
     setTitle(task?.title ?? "");
     setDescription(task?.description ?? "");
-    setStartDate(task?.startDate ?? defaultStartDate());
-    setEndDate(task?.endDate ?? defaultEndDate());
+    const baseDay = defaultDate ?? new Date();
+    setStartDate(task?.startDate ?? dayStart(baseDay));
+    setEndDate(task?.endDate ?? dayEnd(baseDay));
+    setDetailedDates(task ? !isSingleDayWindow(task.startDate, task.endDate) : false);
     setWeekdays(task?.recurrence?.type === "weekly" ? task.recurrence.weekdays : [1]);
     setMonthDay(task?.recurrence?.type === "monthly" ? String(task.recurrence.monthDay) : "1");
     setDueTime(task?.recurrence?.time ?? "23:59");
@@ -348,24 +363,51 @@ export function TaskFormDialog({
             </>
           ) : isTaskShape ? (
             <>
-              <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
-                <Label htmlFor="task-start-date">Bắt đầu</Label>
-                <DateTimePicker
-                  id="task-start-date"
-                  value={startDate}
-                  onChange={(date) => setStartDate(date ?? defaultStartDate())}
-                />
-              </div>
+              {detailedDates ? (
+                <>
+                  <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                    <Label htmlFor="task-start-date">Bắt đầu</Label>
+                    <DateTimePicker
+                      id="task-start-date"
+                      value={startDate}
+                      onChange={(date) => setStartDate(date ?? dayStart(defaultDate ?? new Date()))}
+                    />
+                  </div>
 
-              <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
-                <Label htmlFor="task-end-date">Kết thúc</Label>
-                <DateTimePicker
-                  id="task-end-date"
-                  value={endDate}
-                  onChange={(date) => setEndDate(date ?? defaultEndDate())}
-                />
-                {dateError && <p className="text-xs text-destructive">{dateError}</p>}
-              </div>
+                  <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                    <Label htmlFor="task-end-date">Kết thúc</Label>
+                    <DateTimePicker
+                      id="task-end-date"
+                      value={endDate}
+                      onChange={(date) => setEndDate(date ?? dayEnd(defaultDate ?? new Date()))}
+                    />
+                    {dateError && <p className="text-xs text-destructive">{dateError}</p>}
+                  </div>
+                </>
+              ) : (
+                <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
+                  <Label htmlFor="task-day">Ngày làm</Label>
+                  <DatePicker
+                    id="task-day"
+                    value={startDate}
+                    onChange={(date) => {
+                      const day = date ?? defaultDate ?? new Date();
+                      setStartDate(dayStart(day));
+                      setEndDate(dayEnd(day));
+                      setDateError(null);
+                    }}
+                    placeholder="dd/mm/yyyy"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setDetailedDates((prev) => !prev)}
+                className="-mt-2 self-start text-xs font-medium text-primary hover:underline"
+              >
+                {detailedDates ? "Chỉ làm trong một ngày" : "Nhiều ngày / đặt giờ cụ thể"}
+              </button>
             </>
           ) : (
             <div className="flex w-full min-w-0 flex-1 flex-col gap-1.5 box-border">
