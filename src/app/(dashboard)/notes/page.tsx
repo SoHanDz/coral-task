@@ -1,10 +1,14 @@
 import { Suspense } from "react";
 import { NotesContent } from "@/app/(dashboard)/notes/NotesContent";
 
-export default function NotesPage() {
+export default function NotesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string | string[] }>;
+}) {
   return (
     <Suspense>
-      <NotesContent />
+      <NotesContent searchParams={searchParams} />
     </Suspense>
   );
 }
