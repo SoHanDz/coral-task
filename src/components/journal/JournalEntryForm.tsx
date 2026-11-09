@@ -20,17 +20,43 @@ interface Props {
   onChange: (fieldId: string, value: EntryValue) => void;
 }
 
+const isCompact = (field: JournalField) =>
+  field.type === "number" || field.type === "mood";
+
+/**
+ * Fields keep the order the user set, but a run of short ones (numbers, mood)
+ * shares one wrapping row so the long-text boxes get the space.
+ */
+function groupFields(fields: JournalField[]): JournalField[][] {
+  const groups: JournalField[][] = [];
+  for (const field of fields) {
+    const last = groups[groups.length - 1];
+    if (isCompact(field) && last && isCompact(last[0])) last.push(field);
+    else groups.push([field]);
+  }
+  return groups;
+}
+
 export function JournalEntryForm({ fields, values, onChange }: Props) {
   return (
-    <div className="flex flex-col gap-6">
-      {fields.map((field) => (
-        <FieldInput
-          key={field.id}
-          field={field}
-          value={values[field.id]}
-          onChange={(v) => onChange(field.id, v)}
-        />
-      ))}
+    <div className="flex flex-col gap-7">
+      {groupFields(fields).map((group) => {
+        const inputs = group.map((field) => (
+          <FieldInput
+            key={field.id}
+            field={field}
+            value={values[field.id]}
+            onChange={(v) => onChange(field.id, v)}
+          />
+        ));
+        return isCompact(group[0]) ? (
+          <div key={group[0].id} className="flex flex-wrap items-end gap-x-8 gap-y-5">
+            {inputs}
+          </div>
+        ) : (
+          inputs
+        );
+      })}
     </div>
   );
 }
@@ -49,9 +75,10 @@ function FieldInput({
   if (field.type === "longtext") {
     return (
       <div className="flex flex-col gap-2">
-        <Label>{field.label}</Label>
+        <Label className="text-sm font-medium text-slate-700">{field.label}</Label>
         <Textarea
-          rows={4}
+          rows={6}
+          className="field-sizing-content max-h-[60vh] min-h-40 resize-y px-3.5 py-3 text-base leading-relaxed md:text-base"
           value={typeof value === "string" ? value : ""}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -69,6 +96,7 @@ function FieldInput({
         <Input
           type="number"
           min={0}
+          className="w-32"
           value={typeof value === "number" && value > 0 ? value : ""}
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         />
