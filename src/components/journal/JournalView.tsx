@@ -17,6 +17,7 @@ import type {
 } from "@/lib/journal/types";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { JournalFieldEditor } from "./JournalFieldEditor";
+import { JournalChartLoader } from "./JournalChartLoader";
 import { JournalStats } from "./JournalStats";
 import { JournalTimeline } from "./JournalTimeline";
 
@@ -76,6 +77,17 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
             selectedKey={selectedKey}
             onSelect={selectDay}
           />
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
+        <CardHeader className="px-4 pt-6 sm:px-8 sm:pt-8">
+          <CardTitle className="text-base font-semibold text-slate-700">
+            Biểu đồ
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
+          <JournalChartLoader fields={fields} entries={entries} />
         </CardContent>
       </Card>
 
