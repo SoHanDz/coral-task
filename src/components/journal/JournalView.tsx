@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { format, parseISO } from "date-fns";
 import { saveJournalEntry, updateJournalFields } from "@/app/actions/journal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,8 @@ import type {
 } from "@/lib/journal/types";
 import { JournalEntryForm } from "./JournalEntryForm";
 import { JournalFieldEditor } from "./JournalFieldEditor";
+import { JournalStats } from "./JournalStats";
+import { JournalTimeline } from "./JournalTimeline";
 
 interface Props {
   journal: Journal;
@@ -59,47 +62,88 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
   }
 
   return (
-    <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-8 sm:pt-8">
-        <CardTitle className="text-base font-semibold text-slate-700">
-          {journal.emoji} {journal.name}
-        </CardTitle>
-        <div className="flex items-center gap-3">
-          <SaveStatus
-            status={combineStatus(status, fieldSave.status)}
-            error={error ?? fieldSave.error}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setEditingFields((v) => !v)}
-          >
-            {editingFields ? "Xong" : "Sửa các mục ghi"}
-          </Button>
-          <Input
-            type="date"
-            value={selectedKey}
-            max={todayKey}
-            onChange={(e) => selectDay(e.target.value)}
-            aria-label="Chọn ngày"
-            className="h-9 w-auto"
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
-        {editingFields ? (
-          <JournalFieldEditor fields={fields} onChange={handleFieldsChange} />
-        ) : (
-          <JournalEntryForm
-            key={selectedKey}
+    <div className="flex flex-col gap-6">
+      <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0">
+        <CardHeader className="px-4 pt-6 sm:px-8 sm:pt-8">
+          <CardTitle className="text-base font-semibold text-slate-700">
+            {journal.emoji} {journal.name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
+          <JournalStats
             fields={fields}
-            values={entries[selectedKey] ?? {}}
-            onChange={handleChange}
+            entries={entries}
+            selectedKey={selectedKey}
+            onSelect={selectDay}
           />
-        )}
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
+        <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0 lg:col-span-3">
+          <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 px-4 pt-6 sm:px-8 sm:pt-8">
+            <CardTitle className="text-base font-semibold text-slate-700">
+              {selectedKey === todayKey
+                ? "Hôm nay"
+                : format(parseISO(selectedKey), "dd/MM/yyyy")}
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              <SaveStatus
+                status={combineStatus(status, fieldSave.status)}
+                error={error ?? fieldSave.error}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEditingFields((v) => !v)}
+              >
+                {editingFields ? "Xong" : "Sửa các mục ghi"}
+              </Button>
+              <Input
+                type="date"
+                value={selectedKey}
+                max={todayKey}
+                onChange={(e) => selectDay(e.target.value)}
+                aria-label="Chọn ngày"
+                className="h-9 w-auto"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
+            {editingFields ? (
+              <JournalFieldEditor
+                fields={fields}
+                onChange={handleFieldsChange}
+              />
+            ) : (
+              <JournalEntryForm
+                key={selectedKey}
+                fields={fields}
+                values={entries[selectedKey] ?? {}}
+                onChange={handleChange}
+              />
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border border-slate-200/80 bg-white p-0 shadow-sm ring-0 lg:col-span-2">
+          <CardHeader className="px-4 pt-6 sm:px-6 sm:pt-8">
+            <CardTitle className="text-base font-semibold text-slate-700">
+              Dòng thời gian
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-4 pb-6 sm:px-6 sm:pb-8">
+            <JournalTimeline
+              fields={fields}
+              entries={entries}
+              selectedKey={selectedKey}
+              onSelect={selectDay}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 
