@@ -5,18 +5,16 @@ import { useQuotes } from "@/components/mascot/QuotesProvider";
 
 /** All of the ghost's colours in one place — swap these to re-skin it. */
 const COLORS = {
-  body: "#ddd6fe",
-  outline: "#a78bfa",
-  fold: "#c4b5fd",
-  eyeSocket: "#faf5ff",
-  pupil: "#2e1065",
-  blush: "#f9a8d4",
-  mouth: "#5b21b6",
+  body: "#ffa500",
+  eyeSocket: "#ffffff",
+  pupil: "#3c34f0",
 };
 
 /** How far (in SVG units) a pupil can travel inside its eye, per axis. */
-const MAX_PUPIL_X = 4.5;
-const MAX_PUPIL_Y = 5.5;
+const MAX_PUPIL_X = 6;
+const MAX_PUPIL_Y = 8;
+/** Pupils rest looking slightly down-left until the cursor moves. */
+const PUPIL_REST = "translate(-6px, 2.3px)";
 /** Cursor distance (px) at which the pupil reaches its full offset. */
 const FULL_LOOK_DISTANCE = 140;
 
@@ -36,7 +34,7 @@ function prefersReducedMotion(): boolean {
 }
 
 /**
- * A small bedsheet ghost parked in the corner. Its eyes follow the cursor, and
+ * A small arcade-style orange ghost parked in the corner. Its eyes follow the cursor, and
  * clicking it gives a light squash impact and makes it "say" one of the user's
  * quotes in a speech bubble. Pupils are moved directly through refs (no React
  * state), so tracking the pointer never re-renders anything.
@@ -124,8 +122,6 @@ export function GhostMascot() {
     hideTimer.current = setTimeout(() => setLine(null), visibleFor);
   }
 
-  const speaking = line !== null;
-
   return (
     <div className="pointer-events-none fixed right-3 bottom-[4.5rem] z-30 select-none lg:right-6 lg:bottom-2">
       <div role="status" aria-live="polite" className="absolute right-0 bottom-full mb-3 w-max max-w-[min(240px,calc(100vw-5rem))]">
@@ -154,44 +150,28 @@ export function GhostMascot() {
         )}
         <div ref={body} style={{ transformOrigin: "50% 100%" }}>
           <svg
-            viewBox="0 0 120 140"
+            viewBox="10 10 101 100"
             aria-hidden="true"
-            className="ghost-float h-20 w-[69px] drop-shadow-md lg:h-24 lg:w-[82px]"
+            className="ghost-float h-20 w-20 drop-shadow-md lg:h-24 lg:w-24"
           >
-            {/* Sheet body: round head, soft folds, scalloped hem. */}
+            {/* Body: round dome, straight sides, three-scallop hem. */}
             <path
-              d="M60 8 C30 8 14 30 14 62 L14 118 C14 124 19 126 23 122 C28 117 33 117 38 122 C43 127 49 127 54 122 C57 119 63 119 66 122 C71 127 77 127 82 122 C87 117 92 117 97 122 C101 126 106 124 106 118 L106 62 C106 30 90 8 60 8 Z"
+              d="M12.7 105.5 C13 85 14 62 20 42 C25 25 40 13 60 13 C80 13 95 25 100 42 C106 62 107 85 107.7 105.5 C103 92 84 92 78.3 105.5 C72 92 48 92 41.7 105.5 C36 92 18 92 12.7 105.5 Z"
               fill={COLORS.body}
-              stroke={COLORS.outline}
-              strokeWidth="2.5"
               strokeLinejoin="round"
             />
-            {/* Little fold lines on the sheet. */}
-            <path d="M28 96 C30 104 30 110 28 116" fill="none" stroke={COLORS.fold} strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M92 96 C90 104 90 110 92 116" fill="none" stroke={COLORS.fold} strokeWidth="2.5" strokeLinecap="round" />
 
-            {/* Eyes: socket + pupil that slides toward the cursor. */}
+            {/* Eyes: white socket + blue pupil that slides toward the cursor. */}
             <g className="ghost-blink">
-              <ellipse ref={leftEye} cx="44" cy="62" rx="11" ry="13" fill={COLORS.eyeSocket} stroke={COLORS.outline} strokeWidth="1.5" />
-              <ellipse ref={rightEye} cx="76" cy="62" rx="11" ry="13" fill={COLORS.eyeSocket} stroke={COLORS.outline} strokeWidth="1.5" />
-              <g ref={leftPupil} style={{ transition: "transform 80ms ease-out" }}>
-                <circle cx="44" cy="62" r="6.5" fill={COLORS.pupil} />
-                <circle cx="46.2" cy="59.5" r="2" fill="#ffffff" />
+              <ellipse ref={leftEye} cx="34.7" cy="50" rx="14" ry="17.5" fill={COLORS.eyeSocket} />
+              <ellipse ref={rightEye} cx="74.3" cy="50" rx="14" ry="17.5" fill={COLORS.eyeSocket} />
+              <g ref={leftPupil} style={{ transform: PUPIL_REST, transition: "transform 80ms ease-out" }}>
+                <ellipse cx="34.7" cy="50" rx="7" ry="8" fill={COLORS.pupil} />
               </g>
-              <g ref={rightPupil} style={{ transition: "transform 80ms ease-out" }}>
-                <circle cx="76" cy="62" r="6.5" fill={COLORS.pupil} />
-                <circle cx="78.2" cy="59.5" r="2" fill="#ffffff" />
+              <g ref={rightPupil} style={{ transform: PUPIL_REST, transition: "transform 80ms ease-out" }}>
+                <ellipse cx="74.3" cy="50" rx="7" ry="8" fill={COLORS.pupil} />
               </g>
             </g>
-
-            {/* Blush + mouth (a small smile; opens while it is talking). */}
-            <ellipse cx="30" cy="82" rx="7" ry="4.5" fill={COLORS.blush} opacity="0.7" />
-            <ellipse cx="90" cy="82" rx="7" ry="4.5" fill={COLORS.blush} opacity="0.7" />
-            {speaking ? (
-              <ellipse cx="60" cy="88" rx="5" ry="5.5" fill={COLORS.mouth} />
-            ) : (
-              <path d="M54 86 Q60 92 66 86" fill="none" stroke={COLORS.mouth} strokeWidth="2.5" strokeLinecap="round" />
-            )}
           </svg>
         </div>
       </button>
