@@ -3,12 +3,24 @@
 import { useRef, useState } from "react";
 import { addDays, format, parseISO } from "date-fns";
 import { vi } from "date-fns/locale";
-import { ChevronDown, ChevronLeft, ChevronRight, Settings2 } from "lucide-react";
-import { saveJournalEntry, updateJournalFields } from "@/app/actions/journal";
+import {
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Settings2,
+} from "lucide-react";
+import {
+  renameJournal,
+  saveJournalEntry,
+  updateJournalFields,
+} from "@/app/actions/journal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAutosave, type AutosaveStatus } from "@/hooks/use-autosave";
 import { toDateKey } from "@/lib/date/date-key";
+import { formatEntryForCopy } from "@/lib/journal/export";
 import type {
   EntryValue,
   EntryValues,
@@ -33,8 +45,13 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
   const [entries, setEntries] = useState<JournalEntries>(initialEntries);
   const [selectedKey, setSelectedKey] = useState(todayKey);
   const [fields, setFields] = useState<JournalField[]>(journal.fields);
+  const [name, setName] = useState(journal.name);
   const [editingFields, setEditingFields] = useState(false);
   const [overviewOpen, setOverviewOpen] = useState(false);
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">(
+    "idle",
+  );
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const writeCardRef = useRef<HTMLDivElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +63,16 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
   const fieldSave = useAutosave<JournalField[]>((next) =>
     updateJournalFields(journal.id, next),
   );
+
+  const nameSave = useAutosave<string>((next) =>
+    renameJournal(journal.id, next),
+  );
+
+  function handleNameChange(next: string) {
+    setName(next);
+    // A blank name can't be saved; keep it local until the user types one.
+    if (next.trim()) nameSave.schedule(next.trim());
+  }
 
   function handleFieldsChange(next: JournalField[]) {
     setFields(next);
@@ -72,6 +99,22 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
 
   function shiftDay(delta: number) {
     selectDay(toDateKey(addDays(parseISO(selectedKey), delta)));
+  }
+
+  async function copyEntry() {
+    const text = formatEntryForCopy(
+      { ...journal, name: name.trim() || journal.name, fields },
+      selectedKey,
+      entries[selectedKey] ?? {},
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyState("copied");
+    } catch {
+      setCopyState("error");
+    }
+    clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopyState("idle"), 2000);
   }
 
   function openDatePicker() {
@@ -142,29 +185,60 @@ export function JournalView({ journal, entries: initialEntries }: Props) {
               </div>
               <p className="flex items-center gap-2 pl-10 text-xs text-slate-400">
                 <span>
-                  {journal.emoji} {journal.name}
+                  {journal.emoji} {name.trim() || journal.name}
                 </span>
                 <SaveStatus
-                  status={combineStatus(status, fieldSave.status)}
-                  error={error ?? fieldSave.error}
+                  status={combineStatus(
+                    combineStatus(status, fieldSave.status),
+                    nameSave.status,
+                  )}
+                  error={error ?? fieldSave.error ?? nameSave.error}
                 />
               </p>
             </div>
-            <Button
-              type="button"
-              variant={editingFields ? "default" : "ghost"}
-              size={editingFields ? "sm" : "icon"}
-              className={editingFields ? undefined : "size-8 text-slate-500"}
-              onClick={() => setEditingFields((v) => !v)}
-              aria-label={editingFields ? "Xong" : "Sửa các mục ghi"}
-              title={editingFields ? "Xong" : "Sửa các mục ghi"}
-            >
-              {editingFields ? "Xong" : <Settings2 className="size-4" />}
-            </Button>
+            <div className="flex items-center gap-1">
+              {!editingFields && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 text-slate-500"
+                  onClick={copyEntry}
+                  aria-label="Sao chép nhật ký ngày này"
+                  title="Sao chép nhật ký ngày này để gửi cho AI"
+                >
+                  {copyState === "copied" ? (
+                    <Check className="size-4 text-teal-600" />
+                  ) : (
+                    <Copy className="size-4" />
+                  )}
+                  <span aria-live="polite">
+                    {copyState === "copied"
+                      ? "Đã sao chép"
+                      : copyState === "error"
+                        ? "Không copy được"
+                        : "Sao chép"}
+                  </span>
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant={editingFields ? "default" : "ghost"}
+                size={editingFields ? "sm" : "icon"}
+                className={editingFields ? undefined : "size-8 text-slate-500"}
+                onClick={() => setEditingFields((v) => !v)}
+                aria-label={editingFields ? "Xong" : "Sửa các mục ghi"}
+                title={editingFields ? "Xong" : "Sửa các mục ghi"}
+              >
+                {editingFields ? "Xong" : <Settings2 className="size-4" />}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="px-4 pb-6 sm:px-8 sm:pb-8">
             {editingFields ? (
               <JournalFieldEditor
+                name={name}
+                onNameChange={handleNameChange}
                 fields={fields}
                 onChange={handleFieldsChange}
               />

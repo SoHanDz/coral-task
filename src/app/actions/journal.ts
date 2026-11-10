@@ -151,6 +151,24 @@ export async function saveJournalEntry(
   revalidate();
 }
 
+export async function renameJournal(
+  journalId: string,
+  name: string,
+): Promise<void> {
+  const trimmed = typeof name === "string" ? name.trim() : "";
+  if (trimmed.length < 1 || trimmed.length > 60) {
+    throw new Error("Tên nhật ký cần từ 1 đến 60 ký tự");
+  }
+  const { supabase, userId } = await requireUser();
+  const { error } = await supabase
+    .from("journals")
+    .update({ name: trimmed })
+    .eq("id", journalId)
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
+  revalidate();
+}
+
 export async function updateJournalFields(
   journalId: string,
   fields: JournalField[],

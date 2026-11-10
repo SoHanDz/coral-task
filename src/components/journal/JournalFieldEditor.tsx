@@ -10,11 +10,18 @@ import { FIELD_KINDS } from "@/lib/journal/templates";
 import type { FieldType, JournalField } from "@/lib/journal/types";
 
 interface Props {
+  name: string;
+  onNameChange: (name: string) => void;
   fields: JournalField[];
   onChange: (fields: JournalField[]) => void;
 }
 
-export function JournalFieldEditor({ fields, onChange }: Props) {
+export function JournalFieldEditor({
+  name,
+  onNameChange,
+  fields,
+  onChange,
+}: Props) {
   const [pickedType, setPickedType] = useState<FieldType | null>(null);
   const [label, setLabel] = useState("");
   const [unit, setUnit] = useState("");
@@ -39,6 +46,18 @@ export function JournalFieldEditor({ fields, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="journal-name" className="text-sm font-medium text-slate-700">
+          Tên nhật ký
+        </Label>
+        <Input
+          id="journal-name"
+          value={name}
+          maxLength={60}
+          onChange={(e) => onNameChange(e.target.value)}
+          placeholder="Ví dụ: Giảm cân"
+        />
+      </div>
       <div className="flex flex-col gap-2">
         <p className="text-sm font-medium text-slate-700">
           Mỗi ngày bạn sẽ điền
